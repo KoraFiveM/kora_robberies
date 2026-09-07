@@ -118,7 +118,7 @@ definition = function(definitions)
                             action = { id = 'creator:open', label = 'Edit', icon = 'Settings' },
                         } end
                         return rows
-                    end)(), empty = { title = 'No robberies yet', description = 'Create one here, then place the start, steps, doors, props, and rewards in-game.', icon = 'MapPlus' } },
+                    end)(), empty = 'Create one here, then place the start, steps, doors, props, and rewards in-game.' },
                 },
             },
         },
@@ -171,8 +171,8 @@ definition = function(definitions)
                         { label = 'Start doors', value = #d.startDoors, icon = 'DoorOpen' }, { label = 'Status', value = d.enabled and 'Enabled' or 'Disabled', icon = 'CircleCheck', tone = d.enabled and 'success' or 'warning' },
                     } },
                     { type = 'details', title = 'Start', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Start doors', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
-                    { type = 'list', title = 'Robbery steps', layout = 'list', items = steps, empty = { title = 'No steps', description = 'Place one or more steps to make this robbery playable.', icon = 'ListPlus' } },
-                    { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = { title = 'No local props', description = 'Place optional scenery. qblib spawns it non-networked on each nearby client.', icon = 'Box' } },
+                    { type = 'list', title = 'Robbery steps', layout = 'list', items = steps, empty = 'Place one or more steps to make this robbery playable.' },
+                    { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = 'Place optional scenery. qblib spawns it non-networked on each nearby client.' },
                 },
             },
         }
