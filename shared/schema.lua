@@ -40,7 +40,7 @@ local function slug(value)
     return value ~= '' and value:sub(1, 64) or nil
 end
 
-local games = { lockpick = true, skillbar = true, circuit = true, pinpad = true, hacking = true }
+local games = { lockpick = true, skillbar = true, circuit = true, hacking = true }
 local stepKinds = { hack = true, search = true, drill = true }
 
 S.text, S.number, S.integer, S.coords, S.slug = text, number, integer, coords, slug
@@ -62,6 +62,43 @@ function S.normaliseReward(raw)
     return { kind = kind, name = name, min = min, max = max, chance = chance }
 end
 
+local function normaliseGame(raw, kind)
+    if raw == nil and kind == 'search' then return nil end
+    raw = type(raw) == 'table' and raw or {}
+    local gameType = games[raw.type] and raw.type or (kind == 'drill' and 'skillbar' or 'hacking')
+    local source = type(raw.opts) == 'table' and raw.opts or {}
+    local opts
+
+    if gameType == 'hacking' then
+        opts = {
+            solutionsize = integer(source.solutionsize, 2, 10) or 5,
+            timeout = number(source.timeout, 5, 120) or 30,
+        }
+    elseif gameType == 'lockpick' then
+        opts = {
+            attempts = integer(source.attempts, 1, 8) or 2,
+            pinCount = integer(source.pinCount, 1, 12) or 4,
+            tolerance = number(source.tolerance, 0.03, 0.35) or 0.16,
+            speed = number(source.speed, 0.3, 4.0) or 1.0,
+            timeLimit = integer(source.timeLimit, 2000, 60000) or 15000,
+        }
+    elseif gameType == 'skillbar' then
+        opts = {
+            attempts = integer(source.attempts, 1, 8) or 2,
+            zoneSize = number(source.zoneSize, 0.05, 0.6) or 0.18,
+            speed = number(source.speed, 0.3, 4.0) or 1.2,
+            timeLimit = integer(source.timeLimit, 1500, 30000) or 10000,
+        }
+    else
+        opts = {
+            attempts = integer(source.attempts, 1, 8) or 2,
+            nodeCount = integer(source.nodeCount, 2, 8) or 4,
+            timeLimit = integer(source.timeLimit, 3000, 60000) or 20000,
+        }
+    end
+    return { type = gameType, opts = opts }
+end
+
 function S.normaliseStep(raw)
     if type(raw) ~= 'table' then return nil, 'Invalid robbery step.' end
     local kind = stepKinds[raw.kind] and raw.kind or nil
@@ -71,10 +108,7 @@ function S.normaliseStep(raw)
     local duration = integer(raw.duration, 1000, 120000) or 7000
     if not kind or not label or not position then return nil, 'Every step needs a type, label, and position.' end
     local out = { kind = kind, label = label, coords = position, radius = radius, duration = duration, rewards = {}, unlockDoors = {} }
-    if kind == 'hack' or kind == 'drill' then
-        local game = type(raw.game) == 'table' and raw.game or {}
-        out.game = { type = games[game.type] and game.type or (kind == 'drill' and 'skillbar' or 'hacking'), opts = {} }
-    end
+    out.game = normaliseGame(raw.game, kind)
     for index, reward in ipairs(type(raw.rewards) == 'table' and raw.rewards or {}) do
         if index > 12 then return nil, 'A step can have at most 12 rewards.' end
         local normalised, err = S.normaliseReward(reward)
@@ -97,7 +131,7 @@ function S.normalise(raw)
     local start = coords(raw.start)
     if not id or not label or not start then return nil, 'A robbery needs an id, label, and start location.' end
     local out = {
-        id = id, label = label, enabled = raw.enabled ~= false, start = start,
+        id = id, label = label, enabled = raw.enabled ~= false, startSet = raw.startSet ~= false, start = start,
         startRadius = number(raw.startRadius, 0.5, 15.0) or 2.0,
         cooldown = integer(raw.cooldown, 0, 7 * 24 * 60 * 60) or Config.Robberies.defaultCooldown,
         minPolice = integer(raw.minPolice, 0, 64) or Config.Robberies.defaultMinPolice,

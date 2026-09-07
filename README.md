@@ -3,8 +3,16 @@
 `qbrobberies` is a live, in-game robbery creator. Staff run `/robberies` and
 use qblib's AppShell to create a robbery, place its start zone, create ordered
 search/hack/drill steps, configure rewards, add qbdoorlock doors, and place
-optional scenery. Definitions are persisted in MySQL and are live immediately;
-there is no Lua configuration to edit and no restart after authoring.
+optional scenery. Each step can use a timed interaction alone or a
+server-authorized hacking, skillbar, lockpick, or circuit challenge with easy,
+standard, and hard presets. Definitions are persisted in MySQL and are live
+immediately; there is no Lua configuration to edit and no restart after
+authoring.
+
+New robberies begin as drafts. The creator's readiness check requires a placed
+start zone, at least one ordered step, and a reward on at least one step before
+staff can enable it. Existing steps can be edited without losing their placed
+location, rewards, or assigned doors.
 
 ## Gameplay
 

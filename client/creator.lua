@@ -39,11 +39,54 @@ local function zoneFields(result)
     return { x = result.opts.coords.x, y = result.opts.coords.y, z = result.opts.coords.z }, result.opts.radius
 end
 
+local function challengeOptions()
+    return {
+        { value = 'none', label = 'No challenge (timed action only)' },
+        { value = 'hacking', label = 'Hacking terminal' },
+        { value = 'skillbar', label = 'Skill bar' },
+        { value = 'lockpick', label = 'Lockpick' },
+        { value = 'circuit', label = 'Circuit board' },
+    }
+end
+
+local function challengePreset(gameType, difficulty)
+    if gameType == 'none' then return nil end
+    local hard = difficulty == 'hard'
+    local easy = difficulty == 'easy'
+    if gameType == 'hacking' then return { type = gameType, opts = { solutionsize = hard and 7 or easy and 4 or 5, timeout = hard and 20 or easy and 45 or 30 } } end
+    if gameType == 'lockpick' then return { type = gameType, opts = { attempts = easy and 3 or 2, pinCount = hard and 6 or easy and 3 or 4, tolerance = hard and 0.10 or easy and 0.23 or 0.16, speed = hard and 1.6 or easy and 0.8 or 1.0, timeLimit = hard and 10000 or easy and 22000 or 15000 } } end
+    if gameType == 'circuit' then return { type = gameType, opts = { attempts = easy and 3 or 2, nodeCount = hard and 6 or easy and 3 or 4, timeLimit = hard and 12000 or easy and 30000 or 20000 } } end
+    return { type = 'skillbar', opts = { attempts = easy and 3 or 2, zoneSize = hard and 0.12 or easy and 0.30 or 0.18, speed = hard and 1.6 or easy and 0.8 or 1.2, timeLimit = hard and 7000 or easy and 16000 or 10000 } }
+end
+
+local function stepFields(step)
+    local gameType = step and step.game and step.game.type or (step and 'none' or 'hacking')
+    return {
+        { id = 'kind', label = 'Step type', type = 'select', required = true, default = step and step.kind or 'hack', options = {
+            { value = 'hack', label = 'Hack / bypass security' }, { value = 'search', label = 'Search / loot container' }, { value = 'drill', label = 'Drill / force access' },
+        } },
+        { id = 'label', label = 'Player prompt', type = 'text', required = true, default = step and step.label or 'Hack the security terminal' },
+        { id = 'duration', label = 'Action time (milliseconds)', type = 'number', required = true, default = step and step.duration or 7000, min = 1000, max = 120000 },
+        { id = 'radius', label = 'Interaction radius', type = 'number', required = true, default = step and step.radius or 1.2, min = 0.4, max = 8 },
+        { id = 'gameType', label = 'Security challenge', type = 'select', required = true, default = gameType, options = challengeOptions(), description = 'The selected preset is server-authorized; players cannot lower its difficulty.' },
+        { id = 'difficulty', label = 'Challenge difficulty', type = 'select', required = true, default = 'standard', options = {
+            { value = 'easy', label = 'Easy' }, { value = 'standard', label = 'Standard' }, { value = 'hard', label = 'Hard' },
+        } },
+    }
+end
+
 local definition
+
+local function appUpdate(definitions)
+    local nextDefinition = definition(definitions)
+    nextDefinition.id = nil
+    nextDefinition.onAction = nil
+    return nextDefinition
+end
 
 local function refreshed(saved)
     if type(saved) == 'table' and saved.id then Creator.snapshot[saved.id] = saved end
-    return { update = definition(arraySnapshot()), notice = { tone = 'success', message = 'Robbery saved.' } }
+    return { update = appUpdate(arraySnapshot()), notice = { tone = 'success', message = 'Robbery saved.' } }
 end
 
 local function startZoneFlow(id)
@@ -58,20 +101,14 @@ local function startZoneFlow(id)
 end
 
 local function stepFlow(id)
-    local values = QB.nui.openInputDialog({
-        { id = 'kind', label = 'Step type', type = 'select', required = true, options = {
-            { value = 'hack', label = 'Hack (security minigame)' }, { value = 'search', label = 'Search (timed)' }, { value = 'drill', label = 'Drill (skillbar)' },
-        } },
-        { id = 'label', label = 'Player prompt', type = 'text', required = true, default = 'Search the container' },
-        { id = 'duration', label = 'Action time (milliseconds)', type = 'number', required = true, default = 7000, min = 1000, max = 120000 },
-        { id = 'radius', label = 'Interaction radius', type = 'number', required = true, default = 1.2, min = 0.4, max = 8 },
-    }, 'New robbery step', 'Choose the action, then place its sphere zone in the world.')
+    local values = QB.nui.openInputDialog(stepFields(), 'New robbery step', 'Configure the interaction, challenge, and difficulty, then place its sphere zone in the world.')
     if not values then return Creator.open(id) end
     local captured = QB.zones.startCreator('sphere')
     local coords, _ = zoneFields(captured)
     if not coords then return Creator.open(id) end
     local saved, err = QB.callback.trigger('qbrobberies:server:addStep', id, {
         kind = values.kind, label = values.label, duration = values.duration, radius = values.radius, coords = coords,
+        game = challengePreset(values.gameType, values.difficulty),
     })
     if saved then Creator.snapshot[id] = saved; notify('Robbery step added.', 'success') else notify(err or 'Could not add step.', 'error') end
     Creator.open(id)
@@ -102,6 +139,7 @@ definition = function(definitions)
                         { id = 'label', label = 'Display name', type = 'text', required = true },
                         { id = 'cooldown', label = 'Cooldown (seconds)', type = 'number', default = Config.Robberies.defaultCooldown, min = 0, max = 604800 },
                         { id = 'minPolice', label = 'Minimum police on duty', type = 'number', default = Config.Robberies.defaultMinPolice, min = 0, max = 64 },
+                        { id = 'startRadius', label = 'Initial start radius (metres)', type = 'number', default = 2.0, min = 0.5, max = 15 },
                     } },
                     { id = 'creator:refresh', label = 'Refresh', icon = 'RefreshCw', variant = 'secondary' },
                 },
@@ -114,7 +152,7 @@ definition = function(definitions)
                         local rows = {}
                         for _, d in ipairs(definitions) do rows[#rows + 1] = {
                             id = d.id, label = d.label, icon = 'Landmark', tone = d.enabled and 'success' or 'warning',
-                            description = ('%d steps · %d police · %ds cooldown'):format(#d.steps, d.minPolice, d.cooldown),
+                            description = ('%d steps · %d police · %ds cooldown · %s'):format(#d.steps, d.minPolice, d.cooldown, d.enabled and 'live' or 'draft'),
                             action = { id = 'creator:open', label = 'Edit', icon = 'Settings' },
                         } end
                         return rows
@@ -128,8 +166,9 @@ definition = function(definitions)
         for index, step in ipairs(d.steps) do
             steps[#steps + 1] = {
                 id = ('step:%s:%d'):format(d.id, index), label = ('%d. %s'):format(index, step.label), icon = step.kind == 'hack' and 'Terminal' or step.kind == 'drill' and 'Drill' or 'Search',
-                description = ('%s · %d ms · %d reward(s) · %d door(s)'):format(step.kind, step.duration, #step.rewards, #step.unlockDoors),
+                description = ('%s · %s · %d ms · %.1fm radius · %d reward(s) · %d door(s)'):format(step.kind, step.game and step.game.type or 'timed only', step.duration, step.radius, #step.rewards, #step.unlockDoors),
                 actions = {
+                    { id = 'creator:edit-step', label = 'Edit setup', icon = 'Settings', fields = stepFields(step) },
                     { id = 'creator:add-reward', label = 'Add reward', icon = 'Gift', fields = {
                         { id = 'kind', label = 'Reward type', type = 'select', required = true, options = { { value = 'money', label = 'Money' }, { value = 'item', label = 'Inventory item' } } },
                         { id = 'name', label = 'Account or item name', type = 'text', required = true, description = 'Money: cash or bank.' },
@@ -150,7 +189,7 @@ definition = function(definitions)
         } end
         navigation[#navigation + 1] = {
             id = recordView(d.id), label = d.label, icon = 'Landmark', content = {
-                title = d.label, description = 'All changes go live immediately. Door states are restored when a session ends.',
+                title = d.label, description = 'Author the full route below, then enable only when it passes the readiness check. Door states are restored when a session ends.',
                 actions = {
                     { id = 'creator:policy', label = 'Edit policy', icon = 'SlidersHorizontal', fields = {
                         { id = 'label', label = 'Display name', type = 'text', required = true, default = d.label },
@@ -170,7 +209,12 @@ definition = function(definitions)
                         { label = 'Steps', value = #d.steps, icon = 'ListChecks' }, { label = 'Local props', value = #d.props, icon = 'Box' },
                         { label = 'Start doors', value = #d.startDoors, icon = 'DoorOpen' }, { label = 'Status', value = d.enabled and 'Enabled' or 'Disabled', icon = 'CircleCheck', tone = d.enabled and 'success' or 'warning' },
                     } },
-                    { type = 'details', title = 'Start', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Start doors', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
+                    { type = 'details', title = 'Readiness check', columns = 3, items = {
+                        { label = 'Start zone', value = d.startSet and ('%.1f m'):format(d.startRadius) or 'Not placed', tone = d.startSet and 'success' or 'warning' },
+                        { label = 'Route', value = #d.steps .. ' step(s)', tone = #d.steps > 0 and 'success' or 'warning' },
+                        { label = 'Rewarded steps', value = (function() local n = 0; for _, step in ipairs(d.steps) do if #step.rewards > 0 then n = n + 1 end end; return n end)(), tone = (function() for _, step in ipairs(d.steps) do if #step.rewards > 0 then return 'success' end end; return 'warning' end)() },
+                    } },
+                    { type = 'details', title = 'Start access', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Unlock on start', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
                     { type = 'list', title = 'Robbery steps', layout = 'list', items = steps, empty = 'Place one or more steps to make this robbery playable.' },
                     { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = 'Place optional scenery. qblib spawns it non-networked on each nearby client.' },
                 },
@@ -186,14 +230,14 @@ definition = function(definitions)
                 local data, err = QB.callback.trigger('qbrobberies:server:hydrate')
                 if not data or not data.admin then error(err or 'Could not refresh robberies.') end
                 setSnapshot(data.robberies)
-                return { update = definition(arraySnapshot()), notice = { tone = 'success', message = 'Robberies refreshed.' } }
+                return { update = appUpdate(arraySnapshot()), notice = { tone = 'success', message = 'Robberies refreshed.' } }
             end
             if actionId == 'creator:open' then return { navigate = { viewId = recordView(context.itemId) } } end
             if actionId == 'creator:create' then
                 local saved, err = QB.callback.trigger('qbrobberies:server:create', context.value)
                 if not saved then error(err or 'Could not create robbery.') end
                 Creator.snapshot[saved.id] = saved
-                return { update = definition(arraySnapshot()), navigate = { viewId = recordView(saved.id) }, notice = { tone = 'success', message = 'Robbery created. Place its start zone next.' } }
+                return { update = appUpdate(arraySnapshot()), navigate = { viewId = recordView(saved.id) }, notice = { tone = 'success', message = 'Robbery created as a draft. Place the start zone, steps, rewards, and access doors before enabling it.' } }
             end
             if not id then error('No robbery is selected.') end
             if actionId == 'creator:policy' then
@@ -218,7 +262,7 @@ definition = function(definitions)
                 local ok, err = QB.callback.trigger('qbrobberies:server:delete', id)
                 if not ok then error(err or 'Could not delete robbery.') end
                 Creator.snapshot[id] = nil
-                return { update = definition(arraySnapshot()), navigate = { viewId = 'overview', replace = true }, notice = { tone = 'success', message = 'Robbery deleted.' } }
+                return { update = appUpdate(arraySnapshot()), navigate = { viewId = 'overview', replace = true }, notice = { tone = 'success', message = 'Robbery deleted.' } }
             end
             local propId, propIndex
             if type(context.itemId) == 'string' then propId, propIndex = context.itemId:match('^prop:([%w_]+):(%d+)$') end
@@ -230,6 +274,14 @@ definition = function(definitions)
             end
             local stepId, index = stepFromItem(context.itemId)
             if stepId ~= id or not index then error('No robbery step is selected.') end
+            if actionId == 'creator:edit-step' then
+                local saved, err = QB.callback.trigger('qbrobberies:server:updateStep', id, index, {
+                    kind = context.value.kind, label = context.value.label, duration = context.value.duration, radius = context.value.radius,
+                    game = challengePreset(context.value.gameType, context.value.difficulty),
+                })
+                if not saved then error(err or 'Could not update step.') end
+                return refreshed(saved)
+            end
             if actionId == 'creator:add-reward' then
                 local saved, err = QB.callback.trigger('qbrobberies:server:addReward', id, index, context.value)
                 if not saved then error(err or 'Could not add reward.') end

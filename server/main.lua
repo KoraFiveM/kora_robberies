@@ -25,6 +25,15 @@ local function validDoor(doorId)
     return ok and type(locked) == 'boolean'
 end
 
+local function isReady(definition)
+    if not definition.startSet then return false, 'Place the robbery start zone first.' end
+    if #definition.steps == 0 then return false, 'Add at least one robbery step first.' end
+    for _, step in ipairs(definition.steps) do
+        if #step.rewards > 0 then return true end
+    end
+    return false, 'Add a reward to at least one robbery step first.'
+end
+
 QB.callback.register('qbrobberies:server:hydrate', function(source)
     return { ready = State.ready, admin = State.isAdmin(source), robberies = State.snapshot() }
 end, { rateLimit = { max = 6, window = 10000 } })
@@ -39,8 +48,9 @@ QB.callback.register('qbrobberies:server:create', function(source, payload)
     if count >= Config.Robberies.maxDefinitions then return nil, 'The robbery limit has been reached.' end
     local position = GetEntityCoords(GetPlayerPed(source))
     return State.persist({
-        id = id, label = payload.label, enabled = true, cooldown = payload.cooldown,
-        minPolice = payload.minPolice, start = { x = position.x, y = position.y, z = position.z }, steps = {}, props = {},
+        id = id, label = payload.label, enabled = false, startSet = false, cooldown = payload.cooldown,
+        minPolice = payload.minPolice, startRadius = payload.startRadius,
+        start = { x = position.x, y = position.y, z = position.z }, steps = {}, props = {},
     })
 end, { rateLimit = { max = 4, window = 30000 } })
 
@@ -50,6 +60,10 @@ QB.callback.register('qbrobberies:server:policy', function(source, id, payload)
         draft.label = payload.label or draft.label
         draft.cooldown = payload.cooldown
         draft.minPolice = payload.minPolice
+        if payload.enabled == true then
+            local ready, err = isReady(draft)
+            if not ready then return false, err end
+        end
         draft.enabled = payload.enabled == true
         return true
     end)
@@ -58,7 +72,7 @@ end, { rateLimit = { max = 10, window = 30000 } })
 QB.callback.register('qbrobberies:server:setStart', function(source, id, start, radius)
     return mutation(source, id, function(draft)
         if not S.coords(start) or not S.number(radius, 0.5, 15) then return false, 'Invalid start zone.' end
-        draft.start, draft.startRadius = start, radius
+        draft.start, draft.startRadius, draft.startSet = start, radius, true
         return true
     end)
 end, { rateLimit = { max = 8, window = 30000 } })
@@ -78,6 +92,20 @@ QB.callback.register('qbrobberies:server:removeStep', function(source, id, index
         index = S.integer(index, 1, #draft.steps)
         if not index then return false, 'Unknown robbery step.' end
         table.remove(draft.steps, index)
+        return true
+    end)
+end, { rateLimit = { max = 12, window = 30000 } })
+
+QB.callback.register('qbrobberies:server:updateStep', function(source, id, index, payload)
+    return mutation(source, id, function(draft)
+        index = S.integer(index, 1, #draft.steps)
+        if not index or type(payload) ~= 'table' then return false, 'Invalid robbery step.' end
+        payload.coords = draft.steps[index].coords
+        payload.rewards = draft.steps[index].rewards
+        payload.unlockDoors = draft.steps[index].unlockDoors
+        local step, err = S.normaliseStep(payload)
+        if not step then return false, err end
+        draft.steps[index] = step
         return true
     end)
 end, { rateLimit = { max = 12, window = 30000 } })

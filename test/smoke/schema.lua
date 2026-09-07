@@ -15,6 +15,7 @@ local definition, err = S.normalise({
 H.ok(definition, err)
 H.equal(definition.id, 'pacific_standard', 'ids are normalized')
 H.equal(definition.steps[1].game.type, 'hacking', 'hack defaults to a proof-backed game')
+H.equal(definition.steps[1].game.opts.solutionsize, 5, 'challenge options are normalized and persisted')
 H.equal(definition.props[1].coords.w, 90, 'prop heading survives normalization')
 
 local bad, badErr = S.normalise({ id = 'bad', label = 'Bad', start = { x = 1, y = 2, z = 3 }, steps = { { kind = 'x', label = 'no', coords = { x = 1, y = 1, z = 1 } } } })
