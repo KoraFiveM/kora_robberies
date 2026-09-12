@@ -4,9 +4,7 @@ QbRobberies.state = State
 
 local S = QbRobberies.schema
 
-local function copy(value)
-    return json.decode(json.encode(value))
-end
+local copy = QB.util.deepClone
 
 function State.snapshot()
     local out = {}
