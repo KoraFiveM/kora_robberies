@@ -2,12 +2,6 @@ local State = QbRobberies.state
 local S = QbRobberies.schema
 local RESOURCE = GetCurrentResourceName()
 
-local function checksum(value)
-    local hash = 2166136261
-    for index = 1, #value do hash = ((hash ~ value:byte(index)) * 16777619) & 0xffffffff end
-    return ('%08x'):format(hash)
-end
-
 local function mutation(source, id, transform)
     if not State.ready then return nil, 'Robberies are still loading.' end
     if not State.isAdmin(source) then return nil, 'You cannot edit robberies.' end
@@ -283,8 +277,9 @@ end)
 
 CreateThread(function()
     if not QB.sql.ready(60000) then return print('^1[qbrobberies]^7 qbsql was not ready; resource disabled.') end
-    local sql = assert(LoadResourceFile(RESOURCE, 'sql/001_robberies.sql'), 'missing qbrobberies migration')
-    local _, err = QB.sql.migrate(RESOURCE, { { version = 1, name = 'robberies', sql = sql, checksum = checksum(sql) } })
+    local _, err = QB.sql.migrateFiles(RESOURCE, {
+        { version = 1, name = 'robberies', file = 'sql/001_robberies.sql' },
+    })
     if err then return print(('^1[qbrobberies]^7 migration failed: %s'):format(err)) end
     local loaded, loadErr = State.load()
     if not loaded then return print(('^1[qbrobberies]^7 could not load robberies: %s'):format(tostring(loadErr))) end
