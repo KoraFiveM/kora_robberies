@@ -96,7 +96,7 @@ local function startZoneFlow(id)
     local coords, radius = zoneFields(captured)
     if not coords then return end
     local saved, err = QB.callback.trigger('qbrobberies:server:setStart', id, coords, radius)
-    if saved then Creator.snapshot[id] = saved; notify('Start location saved.', 'success') else notify(err or 'Could not save start location.', 'error') end
+    if saved then Creator.snapshot[id] = saved; notify('start location saved.', 'success') else notify(err or 'Could not save start location.', 'error') end
     Creator.open(id)
 end
 
@@ -207,14 +207,14 @@ definition = function(definitions)
                 blocks = {
                     { type = 'stats', items = {
                         { label = 'Steps', value = #d.steps, icon = 'ListChecks' }, { label = 'Local props', value = #d.props, icon = 'Box' },
-                        { label = 'Start doors', value = #d.startDoors, icon = 'DoorOpen' }, { label = 'Status', value = d.enabled and 'Enabled' or 'Disabled', icon = 'CircleCheck', tone = d.enabled and 'success' or 'warning' },
+                        { label = 'start doors', value = #d.startDoors, icon = 'DoorOpen' }, { label = 'status', value = d.enabled and 'Enabled' or 'Disabled', icon = 'CircleCheck', tone = d.enabled and 'success' or 'warning' },
                     } },
                     { type = 'details', title = 'Readiness check', columns = 3, items = {
-                        { label = 'Start zone', value = d.startSet and ('%.1f m'):format(d.startRadius) or 'Not placed', tone = d.startSet and 'success' or 'warning' },
+                        { label = 'start zone', value = d.startSet and ('%.1f m'):format(d.startRadius) or 'Not placed', tone = d.startSet and 'success' or 'warning' },
                         { label = 'Route', value = #d.steps .. ' step(s)', tone = #d.steps > 0 and 'success' or 'warning' },
                         { label = 'Rewarded steps', value = (function() local n = 0; for _, step in ipairs(d.steps) do if #step.rewards > 0 then n = n + 1 end end; return n end)(), tone = (function() for _, step in ipairs(d.steps) do if #step.rewards > 0 then return 'success' end end; return 'warning' end)() },
                     } },
-                    { type = 'details', title = 'Start access', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Unlock on start', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
+                    { type = 'details', title = 'start access', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Unlock on start', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
                     { type = 'list', title = 'Robbery steps', layout = 'list', items = steps, empty = 'Place one or more steps to make this robbery playable.' },
                     { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = 'Place optional scenery. qblib spawns it non-networked on each nearby client.' },
                 },

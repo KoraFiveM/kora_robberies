@@ -36,7 +36,7 @@ local function refreshPrompt()
     if World.active and World.nearbyStep and World.nearbyStep.id == World.active.id and World.nearbyStep.index == World.active.step then
         text, icon = ('%s [%s]'):format(World.nearbyStep.label, 'E'), 'CirclePlay'
     elseif not World.active and World.nearbyStart then
-        text, icon = ('Start %s [%s]'):format(World.nearbyStart.label, 'E'), 'Mask'
+        text, icon = ('start %s [%s]'):format(World.nearbyStart.label, 'E'), 'Mask'
     end
     if not text then
         if World.prompt then QB.textui.hide(World.prompt); World.prompt = nil end
