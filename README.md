@@ -21,6 +21,11 @@ server owns every session and rechecks player distance, active-session lock,
 on-duty police count, cooldown, completion timing, rewards, and the successful
 qblib minigame proof. A robbery cannot have two concurrent runners.
 
+A successful step reward starts that robbery's cooldown immediately, so
+abandoning, disconnecting or timing out after an early payout cannot reset it.
+Failed or missed step rewards leave the preceding cooldown unchanged. Finishing
+the full robbery still starts a full cooldown from completion time.
+
 Door ids are validated against `qbdoorlock` while authoring. Doors assigned to
 the start or a step are unlocked only for the session and restored to their
 prior state when it ends, times out, the runner leaves, or the player drops.

@@ -233,7 +233,14 @@ QB.callback.register('qbrobberies:server:finishStep', function(source, id, index
     if not State.at(source, step.coords, step.radius + 1.0) then return nil, 'You moved too far away.' end
     if step.game and not QB.minigames.consumeProof(source, proof, step.game.type, pending.authorization) then return nil, 'The security challenge was not completed.' end
     session.pending = nil
+    local previousCooldown = State.cooldowns[id]
+    local rewardCooldown = GetGameTimer() + definition.cooldown * 1000
+    -- Hold the cooldown while reward exports yield; release it only if nothing was paid.
+    if #step.rewards > 0 then State.cooldowns[id] = rewardCooldown end
     local rewards = State.reward(source, step)
+    if #rewards == 0 and State.cooldowns[id] == rewardCooldown then
+        State.cooldowns[id] = previousCooldown
+    end
     for _, doorId in ipairs(step.unlockDoors) do State.setDoor(session, doorId, false) end
     session.step = index + 1
     if session.step > #definition.steps then
