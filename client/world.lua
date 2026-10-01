@@ -32,6 +32,10 @@ local function spawnProps(id)
 end
 
 local function refreshPrompt()
+    if World.active then
+        local live = World.live[World.active.id]
+        World.nearbyStep = live and live.nearbySteps[World.active.step] or nil
+    end
     local text, icon
     if World.active and World.nearbyStep and World.nearbyStep.id == World.active.id and World.nearbyStep.index == World.active.step then
         text, icon = ('%s [%s]'):format(World.nearbyStep.label, 'E'), 'CirclePlay'
@@ -51,7 +55,7 @@ end
 
 local function build(definition)
     local id = definition.id
-    local live = { zones = {}, entities = {}, loaded = false }
+    local live = { zones = {}, entities = {}, loaded = false, nearbySteps = {} }
     World.live[id] = live
     live.zones[#live.zones + 1] = QB.zones.sphere({
         coords = vector(definition.start), radius = Config.Robberies.definitionDistance, debug = Config.Robberies.debug,
@@ -66,8 +70,13 @@ local function build(definition)
     for index, step in ipairs(definition.steps) do
         live.zones[#live.zones + 1] = QB.zones.sphere({
             coords = vector(step.coords), radius = step.radius, debug = Config.Robberies.debug,
-            onEnter = function() World.nearbyStep = { id = id, index = index, label = step.label }; refreshPrompt() end,
+            onEnter = function()
+                live.nearbySteps[index] = { id = id, index = index, label = step.label }
+                World.nearbyStep = live.nearbySteps[index]
+                refreshPrompt()
+            end,
             onExit = function()
+                live.nearbySteps[index] = nil
                 if World.nearbyStep and World.nearbyStep.id == id and World.nearbyStep.index == index then World.nearbyStep = nil; refreshPrompt() end
             end,
         })
