@@ -101,8 +101,9 @@ local function startZoneFlow(id)
 end
 
 local function stepFlow(id)
-    local values = QB.nui.openInputDialog(stepFields(), 'New robbery step', 'Configure the interaction, challenge, and difficulty, then place its sphere zone in the world.')
-    if not values then return Creator.open(id) end
+    local response = QB.nui.openInputDialog(stepFields(), 'New robbery step', 'Configure the interaction, challenge, and difficulty, then place its sphere zone in the world.')
+    if not response or response.cancelled then return Creator.open(id) end
+    local values = response.values
     local captured = QB.zones.startCreator('sphere')
     local coords, _ = zoneFields(captured)
     if not coords then return Creator.open(id) end
@@ -115,8 +116,9 @@ local function stepFlow(id)
 end
 
 local function propFlow(id)
-    local values = QB.nui.openInputDialog({ { id = 'model', label = 'GTA model name', type = 'text', required = true } }, 'Place a local robbery prop')
-    if not values then return Creator.open(id) end
+    local response = QB.nui.openInputDialog({ { id = 'model', label = 'GTA model name', type = 'text', required = true } }, 'Place a local robbery prop')
+    if not response or response.cancelled then return Creator.open(id) end
+    local values = response.values
     if not IsModelValid(joaat(values.model)) then notify('That is not a valid GTA model.', 'error'); return Creator.open(id) end
     local placement = QB.placement.start(values.model)
     if not placement then return Creator.open(id) end
