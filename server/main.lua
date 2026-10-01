@@ -212,7 +212,7 @@ QB.callback.register('qbrobberies:server:beginStep', function(source, id, index)
     local session, definition = State.sessions[id], State.definitions[id]
     index = S.integer(index, 1, definition and #definition.steps or 0)
     if not session or session.source ~= source or not index or session.step ~= index then return nil, 'That robbery step is no longer active.' end
-    if session.pending or session.expiresAt <= GetGameTimer() then return nil, 'That step cannot be started now.' end
+    if session.pending or session.processing or session.expiresAt <= GetGameTimer() then return nil, 'That step cannot be started now.' end
     local step = definition.steps[index]
     if not State.at(source, step.coords, step.radius + 1.0) then return nil, 'Move closer to this step.' end
     local token = ('%d:%d:%d'):format(source, GetGameTimer(), math.random(100000, 999999))
@@ -227,11 +227,13 @@ QB.callback.register('qbrobberies:server:finishStep', function(source, id, index
     index = S.integer(index, 1, definition and #definition.steps or 0)
     if not session or session.source ~= source or not index then return nil, 'That robbery step is no longer active.' end
     local pending = session.pending
-    if not pending or pending.index ~= index or pending.token ~= token then return nil, 'This step was not started.' end
+    if session.processing or not pending or pending.index ~= index or pending.token ~= token then return nil, 'This step was not started.' end
     local step = definition.steps[index]
     if GetGameTimer() - pending.startedAt < step.duration then return nil, 'Finish the action before collecting the reward.' end
     if not State.at(source, step.coords, step.radius + 1.0) then return nil, 'You moved too far away.' end
     if step.game and not QB.minigames.consumeProof(source, proof, step.game.type, pending.authorization) then return nil, 'The security challenge was not completed.' end
+    -- Keep the step reserved while reward exports yield.
+    session.processing = true
     session.pending = nil
     local previousCooldown = State.cooldowns[id]
     local rewardCooldown = GetGameTimer() + definition.cooldown * 1000
@@ -243,6 +245,7 @@ QB.callback.register('qbrobberies:server:finishStep', function(source, id, index
     end
     for _, doorId in ipairs(step.unlockDoors) do State.setDoor(session, doorId, false) end
     session.step = index + 1
+    session.processing = nil
     if session.step > #definition.steps then
         State.cooldowns[id] = GetGameTimer() + definition.cooldown * 1000
         State.stop(session, 'Robbery complete.')

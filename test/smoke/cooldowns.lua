@@ -182,5 +182,48 @@ startRun()
 H.ok(finishStep(1), 'a deliberately zero-cooldown robbery can reward a step')
 abandon()
 startRun()
+
+-- A provider can suspend after pending is retired but before this step advances.
+for index, scenario in ipairs({
+    { kind = 'money', name = 'cash', paid = true },
+    { kind = 'item', name = 'goldbar', paid = true },
+    { kind = 'money', name = 'cash', paid = false },
+}) do
+    if index > 1 then startRun() end
+    definition.steps[1].rewards[1].kind = scenario.kind
+    definition.steps[1].rewards[1].name = scenario.name
+    succeed = scenario.paid
+    local beforeCash, beforeItems = cash, items
+    local pending = assert(begin(1, 'test', 1))
+    now = now + pending.duration
+    onReward = function() coroutine.yield('reward') end
+    local completion = coroutine.create(function() return finish(1, 'test', 1, pending.token) end)
+    local ok, phase = coroutine.resume(completion)
+    H.equal(ok, true, 'completion reaches the provider without an error')
+    H.equal(phase, 'reward', 'the actual State.reward export boundary yields')
+    H.equal(coroutine.status(completion), 'suspended', 'reward completion is still pending')
+    H.equal(State.sessions.test.step, 1, 'the step has not advanced during payout')
+    H.equal(cash, beforeCash, 'suspended money export has not paid')
+    H.equal(items, beforeItems, 'suspended item export has not paid')
+    local duplicate, err = begin(1, 'test', 1)
+    H.rejects(duplicate, err, 'a pending reward cannot begin the same step again')
+    H.equal(err, 'That step cannot be started now.', 'busy begin retains the existing rejection shape')
+    duplicate, err = finish(1, 'test', 1, pending.token)
+    H.rejects(duplicate, err, 'a pending reward cannot be collected again')
+    H.equal(callbacks['qbrobberies:server:cancelStep'](1, 'test', 1, pending.token), false,
+        'cancellation cannot restore the retired pending authorization')
+    local resumed, result = coroutine.resume(completion)
+    H.equal(resumed, true, 'one reserved completion resumes normally')
+    H.equal(coroutine.status(completion), 'dead', 'completion has finished')
+    H.equal(result.complete, false, 'an early payout retains staged progression')
+    H.equal(result.step, 2, 'one completion advances exactly one step')
+    H.equal(#result.rewards, scenario.paid and 1 or 0, 'successful and failed provider result shapes remain unchanged')
+    H.equal(cash, beforeCash + (scenario.kind == 'money' and scenario.paid and 100 or 0), 'money is granted once')
+    H.equal(items, beforeItems + (scenario.kind == 'item' and scenario.paid and 100 or 0), 'items are granted once')
+    succeed = true
+    H.equal(assert(finishStep(2)).complete, true, 'the next step remains usable after the provider settles')
+    H.equal(State.sessions.test, nil, 'normal completion still retires its session')
+    H.equal(doors.vault, true, 'normal completion still restores the door')
+end
 math.random = originalRandom
 H.finish('cooldowns')
