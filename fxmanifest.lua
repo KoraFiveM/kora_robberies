@@ -5,32 +5,32 @@ lua54 'yes'
 name 'qbrobberies'
 author 'qbcore2'
 version '1.0.0'
-description 'In-game robbery creator with server-authoritative sessions'
+description 'House robbery creator: item lists, reusable shell setups and houses'
 
 dependency 'qblib'
 dependency 'qbsql'
 dependency 'qbcore'
-dependency 'qbdoorlock'
+dependency 'qbinterior'
 
 shared_scripts {
     '@qblib/init.lua',
     '@qbsql/init.lua',
     '@qbcore/init.lua',
     'config.lua',
-    'shared/schema.lua',
+    'shared/constants.lua',
+    'shared/shells.lua',
 }
 
 client_scripts {
-    'client/world.lua',
+    'client/shell.lua',
     'client/creator.lua',
     'client/main.lua',
 }
 
+-- Order matters here: each file uses the ones before it.
 server_scripts {
-    'server/state.lua',
-    'server/main.lua',
-}
-
-files {
-    'sql/001_robberies.sql',
+    'server/_functions.lua',
+    'server/rules.lua',
+    'server/data.lua',
+    'server/creator.lua',
 }

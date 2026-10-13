@@ -1,47 +1,13 @@
-# QB Robberies
+# qbrobberies: house robbery creator
 
-`qbrobberies` is a live, in-game robbery creator. Staff run `/robberies` and
-use qblib's AppShell to create a robbery, place its start zone, create ordered
-search/hack/drill steps, configure rewards, add qbdoorlock doors, and place
-optional scenery. Each step can use a timed interaction alone or a
-server-authorized hacking, skillbar, lockpick, or circuit challenge with easy,
-standard, and hard presets. Definitions are persisted in MySQL and are live
-immediately; there is no Lua configuration to edit and no restart after
-authoring.
+Staff run `/houseCreator` (needs the ace set in `Config.Creator`, `command` by default).
 
-New robberies begin as drafts. The creator's readiness check requires a placed
-start zone, at least one ordered step, and a reward on at least one step before
-staff can enable it. Existing steps can be edited without losing their placed
-location, rewards, or assigned doors.
+1. **Item lists**: make a list of items and amounts once (e.g. Kitchen) and reuse it on any prop.
+2. **Shells**: pick a shell from `config.lua`, enter it, aim where the exit goes, then aim and place props and give each one an item list. Props are saved relative to the shell.
+3. **Houses**: pick a shell and aim at each door; keep placing to make many houses in one go. Houses are named for you (`Tier 1 House 1`) and can be renamed. The house uses that shell's saved setup. Each house has its own minimum police, cooldown, security flag and optional hours.
 
-## Gameplay
+Everything is saved in MySQL (`sql/qbrobberies.sql`, the tables are also created on start).
+This resource is the creator only: entering a house and searching its props is not built yet.
 
-Players start a robbery at its start zone and complete each step in order. The
-server owns every session and rechecks player distance, active-session lock,
-on-duty police count, cooldown, completion timing, rewards, and the successful
-qblib minigame proof. A robbery cannot have two concurrent runners.
-
-A successful step reward starts that robbery's cooldown immediately, so
-abandoning, disconnecting or timing out after an early payout cannot reset it.
-Failed or missed step rewards leave the preceding cooldown unchanged. Finishing
-the full robbery still starts a full cooldown from completion time.
-
-Door ids are validated against `qbdoorlock` while authoring. Doors assigned to
-the start or a step are unlocked only for the session and restored to their
-prior state when it ends, times out, the runner leaves, or the player drops.
-
-Robbery-start alerts are sent to `qbdispatch` when it is running; otherwise
-on-duty LEO players receive a qblib notification.
-
-## Strict entity lockdown
-
-The only entities this resource creates are optional decorative props. They are
-spawned through `QB.entities.create(..., { preset = 'static' })`, which qblib
-creates as local, non-networked entities and cleans up automatically. No client
-side networked entity is ever created, so this resource works with
-`sv_entityLockdown strict`.
-
-## Dependencies
-
-`qbsql`, `qblib`, `qbcore`, and `qbdoorlock` are mandatory. `qbdispatch` is
-optional but already trusted in this test server's dispatch configuration.
+Shell keys come from the label in `config.lua` ('Tier 1 House' -> `tier_1_house`). Do not reword a label after saving a setup for it.
+`client/shell.lua` is the only file that knows what a spawned shell looks like.
