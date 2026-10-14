@@ -5,7 +5,7 @@ lua54 'yes'
 name 'qbrobberies'
 author 'qbcore2'
 version '1.0.0'
-description 'House robbery creator: item lists, reusable shell setups and houses'
+description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
 
 dependency 'qblib'
 dependency 'qbsql'
@@ -25,6 +25,7 @@ client_scripts {
     'client/shell.lua',
     'client/creator.lua',
     'client/robbery.lua',
+    'client/store.lua',
     'client/main.lua',
 }
 
@@ -35,4 +36,5 @@ server_scripts {
     'server/data.lua',
     'server/creator.lua',
     'server/robbery.lua',
+    'server/store.lua',
 }

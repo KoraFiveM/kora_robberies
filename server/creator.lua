@@ -37,7 +37,15 @@ local function payload()
     end
     table.sort(houses, byLabel)
 
-    return { lists = lists, setups = Setups, houses = houses, items = items }
+    local stores = {}
+    for id, store in pairs(Stores) do
+        local entry = copyTable(store)
+        entry.id = id
+        stores[#stores + 1] = entry
+    end
+    table.sort(stores, byLabel)
+
+    return { lists = lists, setups = Setups, houses = houses, stores = stores, items = items }
 end
 
 adminCallback('qbrobberies:creator:get', function()
@@ -191,6 +199,66 @@ adminCallback('qbrobberies:creator:houses:delete', function(_, id)
     return payload()
 end)
 
+
+-- ----------------------------------------------------------------------------
+-- Stores
+-- ----------------------------------------------------------------------------
+
+local function updateStore(id, change)
+    local store = validId(id) and Stores[id]
+    if not store then return fail('Unknown store.') end
+
+    local updated, err = change(copyTable(store))
+    if not updated then return fail(err) end
+
+    local ok, saveErr = SaveStore(id, updated)
+    if not ok then return fail(saveErr or 'Failed to save.') end
+    return payload()
+end
+
+adminCallback('qbrobberies:creator:stores:create', function(_, label)
+    label = trim(label, 48)
+    if not label then return fail('Enter a name for the store.') end
+
+    local id = makeId(label, function(candidate) return Stores[candidate] ~= nil end)
+    local ok, err = SaveStore(id, newStore(label))
+    if not ok then return fail(err or 'Failed to save.') end
+
+    local result = payload()
+    result.id = id
+    return result
+end)
+
+adminCallback('qbrobberies:creator:stores:details', function(_, id, input)
+    return updateStore(id, function(store)
+        return cleanStoreDetails(input, store)
+    end)
+end)
+
+adminCallback('qbrobberies:creator:stores:registers', function(_, id, list)
+    return updateStore(id, function(store)
+        local clean, err = cleanRegisters(list)
+        if not clean then return nil, err end
+        store.registers = clean
+        return store
+    end)
+end)
+
+adminCallback('qbrobberies:creator:stores:safes', function(_, id, list)
+    return updateStore(id, function(store)
+        local clean, err = cleanSafes(list)
+        if not clean then return nil, err end
+        store.safes = clean
+        return store
+    end)
+end)
+
+adminCallback('qbrobberies:creator:stores:delete', function(_, id)
+    if not (validId(id) and Stores[id]) then return fail('Unknown store.') end
+    local ok, err = DeleteStore(id)
+    if not ok then return fail(err or 'Failed to delete the store.') end
+    return payload()
+end)
 
 RegisterCommand(Config.Creator.command, function(source)
     if not isAdmin(source) then

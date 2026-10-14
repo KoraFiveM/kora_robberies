@@ -136,3 +136,18 @@ Config.Creator = {
     command = 'houseCreator',
     ace = 'command',
 }
+
+-- Stores: registers and safes. Each store can set its own minimum police; each register its own sticky note chance.
+Config.Robberies.Store = {
+    defaults = {
+        minPolice = 2,
+        resetTime = (1000 * 60) * 30,              -- how long a robbed register or safe stays empty, in milliseconds
+        stickyNoteChance = 10,                     -- percent chance for a new register to give the safe code
+        registerCash = { min = 50, max = 200 },
+        safeCash = { min = 500, max = 1000 },
+        blowTime = { min = 5000, max = 10000 },    -- how long the thermite burns, in milliseconds
+        cashItem = 'cash',
+        stickyNoteItem = 'stickynote',
+        thermiteItem = 'thermite',
+    },
+}

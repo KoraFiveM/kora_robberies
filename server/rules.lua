@@ -207,3 +207,88 @@ function readHouse(id, raw)
     }, { shell = stored.shell, coords = coords })
     return house
 end
+
+-- ----------------------------------------------------------------------------
+-- Stores
+-- ----------------------------------------------------------------------------
+
+function newStore(label)
+    return { label = label, minPolice = Config.Robberies.Store.defaults.minPolice or 0, registers = {}, safes = {} }
+end
+
+function cleanStoreDetails(input, current)
+    if type(input) ~= 'table' then return nil, 'Invalid data.' end
+    local store = copyTable(current)
+
+    local label = trim(input.label, 48)
+    if not label then return nil, 'Enter a name for the store.' end
+    store.label = label
+
+    store.minPolice = inRange(input.minPolice, 0, 100, true)
+    if not store.minPolice then return nil, 'Minimum police must be between 0 and 100.' end
+    return store
+end
+
+-- Registers: { coords, stickyChance, label, progressLabel, time, anim, disable }. Each has its own search settings
+-- (same as a prop) and its own chance of giving the safe code.
+function cleanRegisters(list)
+    if type(list) ~= 'table' then return nil, 'Invalid register list.' end
+
+    local clean = {}
+    for _, entry in ipairs(list) do
+        if #clean >= Limits.registers then return nil, ('A store can have %d registers at most.'):format(Limits.registers) end
+        if type(entry) ~= 'table' then return nil, 'Invalid register.' end
+
+        local coords = cleanVec(entry.coords)
+        if not coords then return nil, 'Every register needs a position.' end
+
+        local time, anim, disable = cleanSearch(entry)
+        if not time then return nil, anim end
+
+        local chance = entry.stickyChance == nil and Config.Robberies.Store.defaults.stickyNoteChance or inRange(entry.stickyChance, 0, 100, true)
+        if not chance then return nil, 'Sticky note chance must be between 0 and 100.' end
+
+        clean[#clean + 1] = {
+            coords = coords, stickyChance = chance, label = trim(entry.label, 48),
+            progressLabel = trim(entry.progressLabel, 48) or 'Robbing Register...',
+            time = time, anim = anim, disable = disable,
+        }
+    end
+    return clean
+end
+
+-- Safes: { coords } with a heading.
+function cleanSafes(list)
+    if type(list) ~= 'table' then return nil, 'Invalid safe list.' end
+
+    local clean = {}
+    for _, entry in ipairs(list) do
+        if #clean >= Limits.safes then return nil, ('A store can have %d safes at most.'):format(Limits.safes) end
+        local coords = type(entry) == 'table' and cleanVec(entry.coords)
+        local heading = coords and (entry.coords.w == nil and 0.0 or inRange(entry.coords.w, -720.0, 720.0))
+        if not (coords and heading) then return nil, 'Every safe needs a position.' end
+        coords.w = heading
+        clean[#clean + 1] = { coords = coords }
+    end
+    return clean
+end
+
+function readStore(id, raw)
+    local stored = decodeJson(raw, {})
+    local store = cleanStoreDetails({
+        label = stored.label or id,
+        minPolice = stored.minPolice or Config.Robberies.Store.defaults.minPolice or 0,
+    }, { registers = {}, safes = {} })
+    if not store then return nil end
+
+    -- a bad entry is skipped, never trusted
+    for _, entry in ipairs(type(stored.registers) == 'table' and stored.registers or {}) do
+        local clean = cleanRegisters({ entry })
+        if clean and clean[1] then store.registers[#store.registers + 1] = clean[1] end
+    end
+    for _, entry in ipairs(type(stored.safes) == 'table' and stored.safes or {}) do
+        local clean = cleanSafes({ entry })
+        if clean and clean[1] then store.safes[#store.safes + 1] = clean[1] end
+    end
+    return store
+end

@@ -22,3 +22,11 @@ Everything is saved in MySQL (`sql/qbrobberies.sql`, the tables are also created
 
 Shell keys come from the label in `config.lua` ('Tier 1 House' -> `tier_1_house`). Do not reword a label after saving a setup for it.
 `client/shell.lua` is the only file that knows what a spawned shell looks like.
+
+## Stores (from qbstorerobbery)
+Build them in `/houseCreator` on the **Stores** page. A store has a name, its own **minimum police**, **registers** and **safes**.
+- **Registers:** aim and place as many as you like. A register uses the same settings as a prop (target text, progress text, time, animation, blocked controls) and has its own **sticky note chance**. Robbing one is a progress bar, then the skill check (`qb-minigames`, skipped if it is not running), then cash.
+- **Safes:** aim and place. A sticky note carries the store's safe code, which opens any safe in that store. Without it, **Blow Up Safe** uses a thermite and, when it has burned, **Retrieve Loot** gives the cash.
+- A robbed register or safe stays empty for `resetTime`. Cash amounts, items and the thermite time are in `Config.Robberies.Store.defaults`.
+- Run `sql/qbrobberies.sql` (the stores table is also created on start).
+- The server checks the distance, the police and who is robbing what. Only positions and settings go to players; the chances and the safe code never do.

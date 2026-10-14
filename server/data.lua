@@ -2,10 +2,12 @@
 --   Lists  [id]       = { label, items = { { item, amount } } }
 --   Setups [shellKey] = { exit = offset, props = { { model, offset, heading, list, label } } }
 --   Houses [id]       = { label, shell, coords, minPolice, cooldown, hours, security }
+--   Stores [id]       = { label, minPolice, registers = { { coords, stickyChance, ...search settings } }, safes = { { coords } } }
 
 Lists = {}
 Setups = {}
 Houses = {}
+Stores = {}
 DataLoaded = false
 
 function SaveList(id, list)
@@ -27,6 +29,24 @@ function SaveHouse(id, house)
     if not ok then return false, err end
     Houses[id] = house
     TriggerClientEvent('qbrobberies:client:reload', -1) -- players re-read where the houses are
+    return true
+end
+
+function SaveStore(id, store)
+    local ok, err = dbSave('stores', id, store)
+    if not ok then return false, err end
+    Stores[id] = store
+    if ResetStoreState then ResetStoreState(id) end -- the registers and safes may have moved
+    TriggerClientEvent('qbrobberies:client:reloadStores', -1)
+    return true
+end
+
+function DeleteStore(id)
+    local ok, err = dbDelete('stores', id)
+    if not ok then return false, err end
+    Stores[id] = nil
+    if ResetStoreState then ResetStoreState(id) end
+    TriggerClientEvent('qbrobberies:client:reloadStores', -1)
     return true
 end
 
@@ -68,6 +88,7 @@ CreateThread(function()
     -- The tables are also in sql/qbrobberies.sql. This only saves forgetting to run it.
     pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_lists` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
     pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_shells` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
+    pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_stores` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
     pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_houses` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
 
     local ok, err = pcall(function()
@@ -81,6 +102,10 @@ CreateThread(function()
         for _, row in ipairs(dbRows('houses')) do
             local house = validId(row.id) and readHouse(row.id, row.data)
             if house then Houses[row.id] = house end
+        end
+        for _, row in ipairs(dbRows('stores')) do
+            local store = validId(row.id) and readStore(row.id, row.data)
+            if store then Stores[row.id] = store end
         end
     end)
     if not ok then

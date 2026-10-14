@@ -1,8 +1,8 @@
 local APP_ID = 'qbrobberies:creator'
 
-local data = { lists = {}, setups = {}, houses = {}, items = {} } -- what the server last sent
+local data = { lists = {}, setups = {}, houses = {}, stores = {}, items = {} } -- what the server last sent
 local currentView = 'lists'
-local selectedList, selectedShell, selectedHouse = nil, nil, nil
+local selectedList, selectedShell, selectedHouse, selectedStore = nil, nil, nil, nil
 local search = { query = nil, results = {}, total = 0 } -- item search on the list page
 local editing = nil     -- while inside a shell: { key, spawned, origin, heading, preview }
 local pendingTool = nil -- something to do with the menu closed: enter, leave or place props
@@ -252,6 +252,30 @@ local function moveHouse(id)
     toast('Entrance moved.', 'success')
 end
 
+local function copyList(list)
+    local copy = {}
+    for index, entry in ipairs(list) do copy[index] = entry end
+    return copy
+end
+
+-- Aims and saves one register or safe at a time, until the admin cancels. tool.field is 'registers' or 'safes'.
+local function placeStoreSpots(tool)
+    while true do
+        local c = aim()
+        if not c then return end
+
+        local store = find(data.stores, tool.id)
+        if not store then return end
+
+        local list = copyList(store[tool.field])
+        list[#list + 1] = tool.build(c)
+
+        local result, err = call('stores:' .. tool.field, tool.id, list)
+        if not result then return toast(err) end
+        toast(tool.field == 'registers' and 'Register placed.' or 'Safe placed.', 'success')
+    end
+end
+
 local function runPendingTool()
     local tool = pendingTool
     pendingTool = nil
@@ -261,7 +285,8 @@ local function runPendingTool()
     elseif tool.kind == 'props' then placeProps(tool)
     elseif tool.kind == 'exit' then placeExit()
     elseif tool.kind == 'houses' then placeHouses(tool.key)
-    elseif tool.kind == 'moveHouse' then moveHouse(tool.id) end
+    elseif tool.kind == 'moveHouse' then moveHouse(tool.id)
+    elseif tool.kind == 'stores' then placeStoreSpots(tool) end
 end
 
 local function listsView()
@@ -553,6 +578,132 @@ local function houseView()
     }
 end
 
+-- ----------------------------------------------------------------------------
+-- Stores: registers and safes
+-- ----------------------------------------------------------------------------
+
+-- A register searches like a prop, with its own words for the target and the progress bar.
+local function registerSearch(register)
+    local search = propSearch(register)
+    if not (register and register.label) then search.label = 'Rob Register' end
+    if not (register and register.progressLabel) then search.progressLabel = 'Robbing Register...' end
+    return search
+end
+
+local function registerFields(register)
+    local fields = {
+        { id = 'stickyChance', label = 'Sticky note chance (%)', type = 'number', min = 0, max = 100,
+            default = register and register.stickyChance or Config.Robberies.Store.defaults.stickyNoteChance,
+            description = 'The chance this register gives a sticky note with the safe code.' },
+    }
+    for _, field in ipairs(searchFields(registerSearch(register))) do
+        if field.id == 'time' then field.label = 'Robbery time (ms)' end
+        if field.id == 'disable' then field.label = 'Block while robbing' end
+        if field.id == 'progressLabel' then field.description = 'Shown on the progress bar while robbing.' end
+        if field.id == 'label' then field.description = 'What the target says.' end
+        fields[#fields + 1] = field
+    end
+    return fields
+end
+
+-- The form values of a register: its search settings and its sticky note chance.
+local function registerFromValues(values)
+    local search, err = searchFromValues(values)
+    if not search then return nil, err end
+
+    local chance = tonumber(values.stickyChance)
+    if not chance or chance < 0 or chance > 100 then return nil, 'Sticky note chance must be between 0 and 100.' end
+    if text(values.progressLabel) == '' then search.progressLabel = 'Robbing Register...' end
+    search.stickyChance = math.floor(chance)
+    return search
+end
+
+local function storesView()
+    local items = {}
+    for _, store in ipairs(data.stores) do
+        items[#items + 1] = {
+            id = store.id, label = store.label, icon = 'ShoppingBag',
+            description = ('%d registers · %d safes · %d police'):format(#store.registers, #store.safes, store.minPolice),
+            action = 'store:select:' .. store.id,
+        }
+    end
+
+    return {
+        id = 'stores', label = 'Stores', icon = 'ShoppingBag',
+        content = {
+            title = 'Stores',
+            description = 'A store has registers and safes. Each store sets its own minimum police.',
+            blocks = {
+                {
+                    type = 'form', id = 'store-create', title = 'New store',
+                    fields = { { id = 'name', label = 'Name', type = 'text', required = true } },
+                    action = { id = 'store:create', label = 'Create store' },
+                },
+                { type = 'list', id = 'store-list', layout = 'cards', columns = 3, items = items, empty = 'No stores yet.' },
+            },
+        },
+    }
+end
+
+local function storeView()
+    local store = find(data.stores, selectedStore)
+    if not store then
+        return {
+            id = 'store', label = 'Store', icon = 'ShoppingBag',
+            content = { title = 'Store', blocks = { { type = 'empty', title = 'Pick a store first.' } } },
+        }
+    end
+
+    local registers = {}
+    for index, register in ipairs(store.registers) do
+        local metadata = { { label = 'Sticky note', value = ('%d%%'):format(register.stickyChance or 0) } }
+        for _, entry in ipairs(searchSummary(registerSearch(register))) do metadata[#metadata + 1] = entry end
+        registers[#registers + 1] = {
+            id = tostring(index), label = register.label or ('Register %d'):format(index), icon = 'MapPin',
+            description = coordsLabel(register.coords), metadata = metadata,
+            actions = {
+                { id = 'register:edit:' .. index, label = 'Settings', icon = 'Pencil', variant = 'primary' },
+                { id = 'register:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' },
+            },
+        }
+    end
+
+    local safes = {}
+    for index, safe in ipairs(store.safes) do
+        safes[#safes + 1] = {
+            id = tostring(index), label = ('Safe %d'):format(index), icon = 'MapPin', description = coordsLabel(safe.coords),
+            actions = { { id = 'safe:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' } },
+        }
+    end
+
+    return {
+        id = 'store', label = store.label, icon = 'ShoppingBag',
+        content = {
+            title = store.label,
+            description = 'Place the registers and safes by aiming at them. A sticky note from any register gives the store\'s safe code.',
+            blocks = {
+                {
+                    type = 'form', id = 'store-data', title = 'Settings',
+                    fields = {
+                        { id = 'label', label = 'Name', type = 'text', required = true, default = store.label },
+                        { id = 'minPolice', label = 'Minimum police', type = 'number', min = 0, max = 100, default = store.minPolice },
+                    },
+                    action = { id = 'store:save', label = 'Save' },
+                },
+                {
+                    type = 'form', id = 'register-place', title = 'Place registers',
+                    fields = registerFields(nil),
+                    action = { id = 'store:placeRegisters', label = 'Aim and place registers' },
+                },
+                { type = 'list', id = 'store-registers', layout = 'cards', columns = 3, title = ('Registers (%d)'):format(#registers), items = registers, empty = 'No registers yet.' },
+                { type = 'actions', actions = { { id = 'store:placeSafes', label = 'Aim and place safes', icon = 'Lock', variant = 'primary' } } },
+                { type = 'list', id = 'store-safes', layout = 'cards', columns = 3, title = ('Safes (%d)'):format(#safes), items = safes, empty = 'No safes yet.' },
+                { type = 'actions', title = 'Danger zone', actions = { { id = 'store:delete', label = 'Delete store', variant = 'destructive' } } },
+            },
+        },
+    }
+end
+
 local function buildNavigation()
     local navigation = { listsView() }
     if selectedList and find(data.lists, selectedList) then navigation[#navigation + 1] = listView() end
@@ -560,6 +711,8 @@ local function buildNavigation()
     if selectedShell then navigation[#navigation + 1] = shellView() end
     navigation[#navigation + 1] = housesView()
     if selectedHouse and find(data.houses, selectedHouse) then navigation[#navigation + 1] = houseView() end
+    navigation[#navigation + 1] = storesView()
+    if selectedStore and find(data.stores, selectedStore) then navigation[#navigation + 1] = storeView() end
     return navigation
 end
 
@@ -848,18 +1001,120 @@ local function houseAction(actionId, values)
     return refresh()
 end
 
+-- Store actions
+local function removeAt(list, index)
+    local kept = {}
+    for position, entry in ipairs(list) do
+        if position ~= index then kept[#kept + 1] = entry end
+    end
+    return kept
+end
+
+local function storeAction(actionId, values)
+    if actionId == 'store:create' then
+        local result, err = call('stores:create', text(values.name))
+        if not result then return fail(err) end
+        selectedStore, currentView = result.id, 'store'
+        return refresh(notice('Store created. Place its registers and safes below.'))
+    end
+
+    local selectId = actionId:match('^store:select:(.+)$')
+    if selectId then
+        if not find(data.stores, selectId) then return fail('Unknown store.') end
+        selectedStore, currentView = selectId, 'store'
+        return refresh()
+    end
+
+    local store = find(data.stores, selectedStore)
+    if not store then return fail('Pick a store first.') end
+
+    if actionId == 'store:save' then
+        local result, err = call('stores:details', store.id, { label = text(values.label), minPolice = tonumber(values.minPolice) })
+        if not result then return fail(err) end
+        return refresh(notice('Saved.'))
+    end
+
+    if actionId == 'store:placeRegisters' then
+        local register, err = registerFromValues(values)
+        if not register then return fail(err) end
+        pendingTool, currentView = {
+            kind = 'stores', id = store.id, field = 'registers',
+            build = function(c)
+                return {
+                    coords = { x = c.x, y = c.y, z = c.z }, stickyChance = register.stickyChance, label = register.label,
+                    progressLabel = register.progressLabel, time = register.time, anim = register.anim, disable = register.disable,
+                }
+            end,
+        }, 'store'
+        return { close = true }
+    end
+
+    if actionId == 'store:placeSafes' then
+        pendingTool, currentView = {
+            kind = 'stores', id = store.id, field = 'safes',
+            build = function(c) return { coords = { x = c.x, y = c.y, z = c.z, w = c.w } } end,
+        }, 'store'
+        return { close = true }
+    end
+
+    local index = tonumber(actionId:match('^register:remove:(%d+)$'))
+    if index then
+        local result, err = call('stores:registers', store.id, removeAt(store.registers, index))
+        if not result then return fail(err) end
+        return refresh(notice('Register deleted.'))
+    end
+
+    index = tonumber(actionId:match('^safe:remove:(%d+)$'))
+    if index then
+        local result, err = call('stores:safes', store.id, removeAt(store.safes, index))
+        if not result then return fail(err) end
+        return refresh(notice('Safe deleted.'))
+    end
+
+    index = tonumber(actionId:match('^register:edit:(%d+)$'))
+    if index then
+        local registers = copyList(store.registers)
+        local register = registers[index]
+        if not register then return refresh() end
+
+        local result = QB.nui.openInputDialog(registerFields(register), 'Register settings', register.label or ('Register %d'):format(index))
+        if not result or result.cancelled then return refresh() end
+
+        local edited, err = registerFromValues(result.values or {})
+        if not edited then return fail(err) end
+        registers[index] = {
+            coords = register.coords, stickyChance = edited.stickyChance, label = edited.label,
+            progressLabel = edited.progressLabel, time = edited.time, anim = edited.anim, disable = edited.disable,
+        }
+        local saved, saveErr = call('stores:registers', store.id, registers)
+        if not saved then return fail(saveErr) end
+        return refresh(notice('Register saved.'))
+    end
+
+    if actionId == 'store:delete' then
+        if not confirmed('Delete store?', ('This removes %s, its registers and its safes.'):format(store.label)) then return refresh() end
+        local result, err = call('stores:delete', store.id)
+        if not result then return fail(err) end
+        selectedStore, currentView = nil, 'stores'
+        return refresh(notice('Store deleted.'))
+    end
+
+    return refresh()
+end
+
 local function onAction(actionId, context)
     local values = context and context.value or {}
 
     if actionId:match('^list:') then return listAction(actionId, values) end
     if actionId:match('^shell:') or actionId:match('^prop:') then return shellAction(actionId, values) end
     if actionId:match('^house:') then return houseAction(actionId, values) end
+    if actionId:match('^store:') or actionId:match('^register:') or actionId:match('^safe:') then return storeAction(actionId, values) end
     return refresh()
 end
 
 QB.nui.registerApp({
     id = APP_ID,
-    title = 'House Creator',
+    title = 'Robbery Creator',
     icon = 'Home',
     layout = 'standard',
     width = 1100,
