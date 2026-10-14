@@ -1,11 +1,9 @@
--- What the creator is allowed to save. Every cleaner returns the clean value, or nil and a message.
 
 local patterns = {
     name = '^[%w_%-%.]+$', -- items and props
+    anim = '^[%w_@%-%.]+$', -- animation dictionaries and clips
 }
 
--- Item lists: { { item, amount } }. `current` is the list as it is now, so an item that
--- was already in it stays valid even if it was removed from the shared items since.
 function cleanItems(list, current)
     if type(list) ~= 'table' then return nil, 'Invalid item list.' end
 
@@ -30,8 +28,49 @@ function cleanItems(list, current)
     return clean
 end
 
--- Props placed in a shell: { model, offset, heading, list, label }. The offset and heading are
--- relative to the shell, so the same setup works wherever the shell is spawned.
+function cleanSearch(entry)
+    local time = DefaultSearch.time
+    if entry.time ~= nil then
+        time = inRange(entry.time, 500, 300000, true)
+        if not time then return nil, 'Search time must be between 500 and 300000 ms.' end
+    end
+
+    local anim
+    if entry.anim == nil then
+        anim = copyTable(DefaultSearch.anim)
+    elseif type(entry.anim) == 'table' then
+        local dict = cleanName(entry.anim.dict, 64, patterns.anim)
+        local clip = cleanName(entry.anim.clip, 64, patterns.anim)
+        if dict == false then return nil, 'Enter a valid animation dictionary.' end
+        if clip == false then return nil, 'Enter a valid animation clip.' end
+        if (dict == nil) ~= (clip == nil) then return nil, 'An animation needs both a dictionary and a clip.' end
+        if dict then
+            anim = { dict = dict, clip = clip, flag = inRange(entry.anim.flag, 0, 65535, true) or DefaultSearch.anim.flag }
+        else
+            anim = false
+        end
+    elseif entry.anim == false then
+        anim = false
+    else
+        return nil, 'Invalid animation.'
+    end
+
+    local disable
+    if entry.disable == nil then
+        disable = copyTable(DefaultSearch.disable)
+    elseif type(entry.disable) == 'table' then
+        disable = {}
+        for _, option in ipairs(ProgressDisableOptions) do
+            local on = entry.disable[option.value] == true
+            if not on then for _, key in ipairs(entry.disable) do if key == option.value then on = true end end end
+            if on then disable[option.value] = true end
+        end
+    else
+        return nil, 'Invalid list of disabled controls.'
+    end
+    return time, anim, disable
+end
+
 function cleanProps(list)
     if type(list) ~= 'table' then return nil, 'Invalid prop list.' end
 
@@ -40,8 +79,9 @@ function cleanProps(list)
         if #clean >= Limits.props then return nil, ('A shell can have %d props at most.'):format(Limits.props) end
         if type(entry) ~= 'table' then return nil, 'Invalid prop.' end
 
+        -- No model means a box target at that spot instead of a prop.
         local model = cleanName(entry.model, 64, patterns.name)
-        if not model then return nil, 'Enter a valid prop model.' end
+        if model == false then return nil, 'Enter a valid prop model, or leave it empty for a box target.' end
         local offset = cleanVec(entry.offset, 500.0)
         if not offset then return nil, 'Every prop needs an offset.' end
         local heading = entry.heading == nil and 0.0 or inRange(entry.heading, -720.0, 720.0)
@@ -53,19 +93,24 @@ function cleanProps(list)
             listId = entry.list
         end
 
-        clean[#clean + 1] = { model = model, offset = offset, heading = heading, list = listId, label = trim(entry.label, 48) }
+        local time, anim, disable = cleanSearch(entry)
+        if not time then return nil, anim end
+
+        clean[#clean + 1] = {
+            model = model, offset = offset, heading = heading, list = listId, label = trim(entry.label, 48),
+            time = time, anim = anim, disable = disable,
+            progressLabel = trim(entry.progressLabel, 48) or DefaultSearch.progressLabel,
+        }
     end
     return clean
 end
 
--- A shell's exit: where the exit target sits, relative to the shell.
 function cleanExit(value)
     local offset = cleanVec(value, 500.0)
     if not offset then return nil, 'The exit needs a position.' end
     return offset
 end
 
--- A world position with a heading, for a house entrance.
 function cleanEntrance(value)
     local coords = cleanVec(value)
     if not coords then return nil, 'The house needs a position.' end
@@ -87,7 +132,6 @@ function newHouse(label, shell, coords)
     }
 end
 
--- The settings form of a house.
 function cleanHouseDetails(input, current)
     if type(input) ~= 'table' then return nil, 'Invalid data.' end
     local house = copyTable(current)
@@ -102,6 +146,20 @@ function cleanHouseDetails(input, current)
     if not house.cooldown then return nil, 'Cooldown must be between 0 and 1440 minutes.' end
     house.security = input.security == true
 
+    for _, key in ipairs({ 'breakItem', 'securityItem' }) do
+        local item = cleanName(input[key], 64, patterns.name)
+        if item == false then return nil, 'Invalid item name.' end
+        if item and not itemExists(item) then return nil, ('%s does not exist.'):format(item) end
+        house[key] = item
+    end
+
+    if input.lowerZ == nil then
+        house.lowerZ = nil
+    else
+        house.lowerZ = inRange(input.lowerZ, -300.0, 0.0)
+        if not house.lowerZ then return nil, 'Shell depth must be between -300 and 0.' end
+    end
+
     if input.timeLimit == true then
         local from, to = inRange(input.timeFrom, 0, 23, true), inRange(input.timeTo, 0, 23, true)
         if not (from and to) then return nil, 'Hours must be between 0 and 23.' end
@@ -112,11 +170,17 @@ function cleanHouseDetails(input, current)
     return house
 end
 
--- Readers for rows from the database: a bad row is repaired where it can be, never trusted.
 function readList(id, raw)
     local stored = decodeJson(raw, {})
     local items = cleanItems(type(stored.items) == 'table' and stored.items or {}, stored.items)
     return { label = trim(stored.label, 48) or id, items = items or {} }
+end
+
+function cleanBreakItem(value)
+    local item = cleanName(value, 64, patterns.name)
+    if item == false then return nil, 'Invalid item name.' end
+    if item and not itemExists(item) then return nil, ('%s does not exist.'):format(item) end
+    return item
 end
 
 function readSetup(raw)
@@ -127,7 +191,7 @@ function readSetup(raw)
         local clean = cleanProps({ entry })
         if clean and clean[1] then props[#props + 1] = clean[1] end
     end
-    return { exit = cleanVec(stored.exit, 500.0), props = props }
+    return { exit = cleanVec(stored.exit, 500.0), props = props, breakItem = cleanName(stored.breakItem, 64, patterns.name) or nil }
 end
 
 function readHouse(id, raw)
@@ -137,7 +201,8 @@ function readHouse(id, raw)
 
     local house = cleanHouseDetails({
         label = stored.label or id, minPolice = stored.minPolice or 0, cooldown = stored.cooldown or 0,
-        security = stored.security, timeLimit = type(stored.hours) == 'table',
+        security = stored.security, breakItem = stored.breakItem, securityItem = stored.securityItem, lowerZ = stored.lowerZ,
+        timeLimit = type(stored.hours) == 'table',
         timeFrom = type(stored.hours) == 'table' and stored.hours.from, timeTo = type(stored.hours) == 'table' and stored.hours.to,
     }, { shell = stored.shell, coords = coords })
     return house

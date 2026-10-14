@@ -16,7 +16,6 @@ local function byLabel(a, b)
     return a.id < b.id
 end
 
--- Everything the creator shows. Every change below answers with this.
 local function payload()
     local shared, items = allItems(), {}
     local function track(name)
@@ -45,9 +44,6 @@ adminCallback('qbrobberies:creator:get', function()
     return payload()
 end)
 
--- ----------------------------------------------------------------------------
--- Item lists
--- ----------------------------------------------------------------------------
 
 adminCallback('qbrobberies:creator:lists:create', function(_, label)
     label = trim(label, 48)
@@ -94,9 +90,6 @@ adminCallback('qbrobberies:creator:lists:delete', function(_, id)
     return payload()
 end)
 
--- ----------------------------------------------------------------------------
--- Shell setups: the exit and the props, saved per shell
--- ----------------------------------------------------------------------------
 
 local function updateSetup(key, change)
     if not HouseShellByKey[key] then return fail('Unknown shell.') end
@@ -126,16 +119,20 @@ adminCallback('qbrobberies:creator:shells:props', function(_, key, props)
     end)
 end)
 
+adminCallback('qbrobberies:creator:shells:breakItem', function(_, key, item)
+    return updateSetup(key, function(setup)
+        local clean, err = cleanBreakItem(item)
+        if err then return err end
+        setup.breakItem = clean
+    end)
+end)
+
 adminCallback('qbrobberies:creator:shells:clear', function(_, key)
     if not (HouseShellByKey[key] and Setups[key]) then return fail('That shell has no setup.') end
     local ok, err = DeleteSetup(key)
     if not ok then return fail(err or 'Failed to clear the setup.') end
     return payload()
 end)
-
--- ----------------------------------------------------------------------------
--- Houses
--- ----------------------------------------------------------------------------
 
 local function updateHouse(id, change)
     local house = validId(id) and Houses[id]
@@ -149,7 +146,6 @@ local function updateHouse(id, change)
     return payload()
 end
 
--- Houses are named for you: 'Tier 1 House 1', 'Tier 1 House 2'. Rename one in its settings.
 local function defaultHouseLabel(shellKey)
     local count = 1
     for _, house in pairs(Houses) do
@@ -179,7 +175,6 @@ adminCallback('qbrobberies:creator:houses:details', function(_, id, input)
     end)
 end)
 
--- "Grab coords" again: moves the entrance without touching anything else.
 adminCallback('qbrobberies:creator:houses:coords', function(_, id, coords)
     return updateHouse(id, function(house)
         local entrance, err = cleanEntrance(coords)
@@ -196,7 +191,6 @@ adminCallback('qbrobberies:creator:houses:delete', function(_, id)
     return payload()
 end)
 
--- ----------------------------------------------------------------------------
 
 RegisterCommand(Config.Creator.command, function(source)
     if not isAdmin(source) then

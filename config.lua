@@ -5,10 +5,21 @@ Config.Robberies = {
         defaults = {
             minPolice = 0,
             cooldown = (1000 * 60) * 15, -- 15 minutes in milliseconds
+            robberyTime = (1000 * 60) * 15, -- how long a house stays open to everyone once someone has broken in, in milliseconds
             maxSteps = 20,
             maxProps = 30,
             lowerZ = -20, -- this is to put the shell below the ground level initially, you can adjust this value as needed per house 
             debug = false,
+            breakItem = 'lockpick',          -- needed to break in, unless the shell or the house says otherwise
+            securityItem = 'electronickit',  -- also needed when a house has its security system on
+            consumeBreakItem = true,         -- the break-in item is used up on a successful break-in
+            breakTime = 8000,                -- ms
+            searchTime = 5000,               -- ms to search one prop
+            searchLabel = 'Searching...',    -- the progress bar text while searching. Each prop can change it
+            policeJob = 'police',
+            breakAnim = { dict = 'missheistfbisetup1', clip = 'hassle_intro_loop_f', flags = 49 },
+            searchAnim = { dict = 'mp_arresting', clip = 'a_uncuff', flag = 49 },
+            searchDisable = { vehicle = true, move = true, combat = true }, -- what is blocked while searching. Each prop can change it
         },
         shells = {
             {

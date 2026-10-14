@@ -1,32 +1,26 @@
--- Helpers used by every server script. Anything that comes from the creator goes through these.
-
 function decodeJson(raw, fallback)
     if type(raw) ~= 'string' or raw == '' then return fallback end
     local ok, decoded = pcall(json.decode, raw)
     return ok and type(decoded) == 'table' and decoded or fallback
 end
 
--- A trimmed string of at most `max` characters, or nil when it is empty or not a string.
 function trim(value, max)
     if type(value) ~= 'string' or not value:match('%S') then return nil end
     return value:match('^%s*(.-)%s*$'):sub(1, max)
 end
 
--- A number inside [min, max] (rounded down when `whole`), or nil. Rejects NaN.
 function inRange(value, min, max, whole)
     local n = tonumber(value)
     if not n or n ~= n or n < min or n > max then return nil end
     return whole and math.floor(n) or n
 end
 
--- trim() plus a character check. nil = empty, false = it has characters the pattern does not allow.
 function cleanName(value, max, pattern)
     local text = trim(value, max)
     if not text then return nil end
     return text:match(pattern) and text or false
 end
 
--- { x, y, z } with every part a real number inside +-limit, or nil.
 function cleanVec(value, limit)
     if type(value) ~= 'table' then return nil end
     limit = limit or 10000.0
@@ -63,9 +57,6 @@ function makeId(label, isTaken)
     return id
 end
 
--- ----------------------------------------------------------------------------
--- Items
--- ----------------------------------------------------------------------------
 
 function allItems()
     local ok, items = pcall(function() return exports['qb-core']:GetShared('Items') end)
@@ -85,7 +76,6 @@ function itemEntry(shared, name)
     return { label = tostring(info.label or name), image = image }
 end
 
--- Items whose name or label contains the query. isAdded(name) marks the ones already in the list.
 function searchItems(query, isAdded)
     local text = trim(query, 64)
     if not text then return false, 'Type part of an item name or label to search.' end
@@ -109,13 +99,7 @@ function searchItems(query, isAdded)
     return { results = results, total = total }
 end
 
--- ----------------------------------------------------------------------------
--- Database. One table per kind, one row per id, the data as JSON.
--- ----------------------------------------------------------------------------
-
 local tables = { lists = 'qbrobberies_lists', shells = 'qbrobberies_shells', houses = 'qbrobberies_houses' }
-
--- Inserts the row, or updates it when it already exists. Returns ok, err.
 function dbSave(kind, id, data)
     local name = tables[kind]
     if not name then return false, 'Unknown table.' end
@@ -135,4 +119,51 @@ end
 
 function dbRows(kind)
     return QB.sql.query(('SELECT * FROM `%s`'):format(tables[kind])) or {}
+end
+
+function isNear(src, coords, radius)
+    if not coords then return false end
+    local x, y, z = tonumber(coords.x), tonumber(coords.y), tonumber(coords.z)
+    if not (x and y and z) then return false end
+    return QB.distance.player(src, vec3(x, y, z), radius or 5.0)
+end
+
+local cooldowns = {}
+function onCooldown(src, key)
+    return cooldowns[key] ~= nil and cooldowns[key][src] == true
+end
+
+function startCooldown(src, key, duration)
+    cooldowns[key] = cooldowns[key] or {}
+    cooldowns[key][src] = true
+    SetTimeout(duration, function() cooldowns[key][src] = nil end)
+end
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    for _, timers in pairs(cooldowns) do timers[src] = nil end
+end)
+
+local warned = false
+function playerJob(src)
+    local ok, player = pcall(function() return exports.qbcore:getPlayer(src) end)
+    local data = ok and type(player) == 'table' and (player.PlayerData or player.playerData or player.data or player) or nil
+    local job = type(data) == 'table' and data.job
+    if type(job) ~= 'table' then
+        if not warned then
+            warned = true
+            QB.print.warn('[qbrobberies] could not read a player\'s job, so no police are counted. Fix playerJob() in server/_functions.lua.')
+        end
+        return nil, false
+    end
+    return job.name, job.onduty ~= false
+end
+
+function PoliceOnDuty()
+    local count = 0
+    for _, id in ipairs(GetPlayers()) do
+        local name, onDuty = playerJob(tonumber(id))
+        if name == Config.Robberies.House.defaults.policeJob and onDuty then count = count + 1 end
+    end
+    return count
 end

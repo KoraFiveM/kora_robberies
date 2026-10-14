@@ -26,6 +26,7 @@ function SaveHouse(id, house)
     local ok, err = dbSave('houses', id, house)
     if not ok then return false, err end
     Houses[id] = house
+    TriggerClientEvent('qbrobberies:client:reload', -1) -- players re-read where the houses are
     return true
 end
 
@@ -40,6 +41,7 @@ function DeleteHouse(id)
     local ok, err = dbDelete('houses', id)
     if not ok then return false, err end
     Houses[id] = nil
+    TriggerClientEvent('qbrobberies:client:reload', -1)
     return true
 end
 
@@ -87,4 +89,12 @@ CreateThread(function()
     end
 
     DataLoaded = true
+
+    -- A house whose shell has no exit cannot be robbed. Say so once, so it is not a silent mystery.
+    for id, house in pairs(Houses) do
+        local setup = Setups[house.shell]
+        if not (setup and setup.exit) then
+            QB.print.warn(('[qbrobberies] house "%s" uses the shell "%s", which has no exit set yet. Players cannot get in until you set it in /%s.'):format(id, house.shell, Config.Creator.command))
+        end
+    end
 end)

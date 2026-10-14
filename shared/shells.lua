@@ -20,3 +20,10 @@ for _, shell in ipairs(Config.Robberies.House.shells) do
     HouseShells[#HouseShells + 1] = entry
     HouseShellByKey[key] = entry
 end
+
+-- Where a house's shell is spawned: below its entrance. Every player entering the same house spawns it
+-- at the same place, so they end up in the same room. A house can set its own depth.
+function HouseSpawnCoords(house)
+    local lower = house.lowerZ or Config.Robberies.House.defaults.lowerZ
+    return vector3(house.coords.x, house.coords.y, house.coords.z + lower)
+end

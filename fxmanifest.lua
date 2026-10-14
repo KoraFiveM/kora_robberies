@@ -24,6 +24,7 @@ shared_scripts {
 client_scripts {
     'client/shell.lua',
     'client/creator.lua',
+    'client/robbery.lua',
     'client/main.lua',
 }
 
@@ -33,4 +34,5 @@ server_scripts {
     'server/rules.lua',
     'server/data.lua',
     'server/creator.lua',
+    'server/robbery.lua',
 }

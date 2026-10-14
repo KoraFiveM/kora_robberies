@@ -7,15 +7,10 @@ local search = { query = nil, results = {}, total = 0 } -- item search on the li
 local editing = nil     -- while inside a shell: { key, spawned, origin, heading, preview }
 local pendingTool = nil -- something to do with the menu closed: enter, leave or place props
 
--- ----------------------------------------------------------------------------
--- Small helpers
--- ----------------------------------------------------------------------------
-
 local function notice(message, tone)
     return { tone = tone or 'success', message = message }
 end
 
--- A form value as trimmed text ('' when it is missing or not text).
 local function text(value)
     return type(value) == 'string' and value:match('^%s*(.-)%s*$') or ''
 end
@@ -24,7 +19,6 @@ local function toast(message, kind)
     QB.notify.send({ title = 'House Creator', message = message, type = kind or 'error' })
 end
 
--- Asks the admin to confirm. True when they did.
 local function confirmed(title, message)
     local answer = QB.nui.openAlert({ title = title, message = message, confirmLabel = 'Delete' })
     return answer and answer.confirmed == true
@@ -59,7 +53,74 @@ local function listLabel(id)
     return list and list.label or 'No list'
 end
 
--- Calls the server. Every change answers with the whole data, which replaces what we have.
+local function propSearch(prop)
+    local anim = DefaultSearch.anim
+    if prop and prop.anim ~= nil then anim = prop.anim end -- false means no animation
+    return {
+        label = prop and prop.label or nil,
+        progressLabel = prop and prop.progressLabel or DefaultSearch.progressLabel,
+        time = prop and prop.time or DefaultSearch.time,
+        anim = anim,
+        disable = prop and prop.disable or DefaultSearch.disable,
+    }
+end
+
+local function searchFields(search)
+    local anim = search.anim or {}
+    local fields = {
+        { id = 'label', label = 'Target label', type = 'text', default = search.label or '', description = 'Optional. What the target says, e.g. Search the fridge.' },
+        { id = 'progressLabel', label = 'Progress text', type = 'text', default = search.progressLabel, description = 'Shown on the progress bar while searching.' },
+        { id = 'time', label = 'Search time (ms)', type = 'number', min = 500, max = 300000, required = true, default = search.time },
+        { id = 'animDict', label = 'Animation dictionary', type = 'text', default = anim.dict or '',
+            description = 'e.g. mp_arresting. Leave the dictionary and the clip empty for no animation.' },
+        { id = 'animClip', label = 'Animation clip', type = 'text', default = anim.clip or '', description = 'The clip inside that dictionary, e.g. a_uncuff.' },
+        { id = 'animFlag', label = 'Animation flag', type = 'number', min = 0, max = 65535, default = anim.flag or DefaultSearch.anim.flag,
+            description = 'GTA animation flags. 49 keeps the upper body animating while allowing movement.' },
+    }
+    local blocked = {}
+    for _, option in ipairs(ProgressDisableOptions) do
+        if search.disable[option.value] == true then blocked[#blocked + 1] = option.value end
+    end
+    fields[#fields + 1] = { id = 'disable', label = 'Block while searching', type = 'multiselect', options = ProgressDisableOptions,
+        default = blocked, description = 'Controls that are blocked while the progress bar runs.' }
+    return fields
+end
+
+local function searchFromValues(values)
+    local time = tonumber(values.time)
+    if not time then return nil, 'Enter the search time in milliseconds.' end
+
+    local dict, clip = text(values.animDict), text(values.animClip)
+    local anim = false
+    if dict ~= '' or clip ~= '' then
+        if dict == '' or clip == '' then return nil, 'An animation needs both a dictionary and a clip.' end
+        if not DoesAnimDictExist(dict) then return nil, 'Unknown animation dictionary.' end
+        anim = { dict = dict, clip = clip, flag = math.floor(tonumber(values.animFlag) or DefaultSearch.anim.flag) }
+    end
+
+    local disable = {}
+    for _, key in ipairs(type(values.disable) == 'table' and values.disable or {}) do disable[key] = true end
+    local label, progressLabel = text(values.label), text(values.progressLabel)
+    return {
+        label = label ~= '' and label or nil,
+        progressLabel = progressLabel ~= '' and progressLabel or DefaultSearch.progressLabel,
+        time = math.floor(time), anim = anim, disable = disable,
+    }
+end
+
+local function searchSummary(search)
+    local blocked = {}
+    for _, option in ipairs(ProgressDisableOptions) do
+        if search.disable[option.value] then blocked[#blocked + 1] = option.label end
+    end
+    return {
+        { label = 'Progress text', value = search.progressLabel },
+        { label = 'Search time', value = ('%.1f s'):format(search.time / 1000) },
+        { label = 'Animation', value = search.anim and ('%s / %s'):format(search.anim.dict, search.anim.clip) or 'None' },
+        { label = 'Blocks', value = #blocked > 0 and table.concat(blocked, ', ') or 'Nothing' },
+    }
+end
+
 local function call(name, ...)
     local result, err = QB.callback.trigger('qbrobberies:creator:' .. name, ...)
     if not result then return nil, err or 'Something went wrong.' end
@@ -73,10 +134,6 @@ local function copyProps(key)
     return props
 end
 
--- ----------------------------------------------------------------------------
--- Inside a shell: spawn it, show the saved props, put the player back
--- ----------------------------------------------------------------------------
-
 local function clearPreview()
     if not editing then return end
     for _, entity in ipairs(editing.preview) do
@@ -85,16 +142,14 @@ local function clearPreview()
     editing.preview = {}
 end
 
--- Shows every saved prop where it will be, so you can see what is already placed.
 local function rebuildPreview()
     if not editing then return end
     clearPreview()
     for _, prop in ipairs(setupFor(editing.key).props) do
-        local world, heading = FromShellOffset(editing.spawned, prop.offset, prop.heading)
-        local ok, entity = pcall(QB.entities.create, prop.model, vector4(world.x, world.y, world.z, heading), { freeze = true, invincible = true })
-        if ok and entity then
-            SetEntityHeading(entity, heading)
-            editing.preview[#editing.preview + 1] = entity
+        if prop.model then -- a box target has nothing to show
+            local world, heading = FromShellOffset(editing.spawned, prop.offset, prop.heading)
+            local entity = SpawnProp(prop.model, world, heading)
+            if entity then editing.preview[#editing.preview + 1] = entity end
         end
     end
 end
@@ -105,7 +160,10 @@ local function enterShell(key)
     local lower = Config.Robberies.House.defaults.lowerZ or -20
 
     local spawned, err = SpawnShell(HouseShellByKey[key], vector3(origin.x, origin.y, origin.z + lower))
-    if not spawned then return toast(err) end
+    if not spawned then
+        QB.print.warn(('[qbrobberies] could not enter the %s shell: %s'):format(key, tostring(err)))
+        return toast(err)
+    end
 
     editing = { key = key, spawned = spawned, origin = origin, heading = heading, preview = {} }
 
@@ -114,6 +172,14 @@ local function enterShell(key)
     SetEntityCoords(ped, entry.x, entry.y, entry.z)
     Wait(500)
     rebuildPreview()
+    toast(('You are inside the %s shell. Aim the exit and place props from the creator.'):format(HouseShellByKey[key].label), 'success')
+end
+
+local function notInsideReason(key)
+    if not editing then return 'You are not inside a shell yet. Press Enter the shell to edit.' end
+    if editing.key ~= key then
+        return ('You are inside the %s shell. Leave it first, or open that shell\'s page.'):format(HouseShellByKey[editing.key].label)
+    end
 end
 
 local function leaveShell()
@@ -127,16 +193,18 @@ local function leaveShell()
     editing = nil
 end
 
--- Aims at the shell and saves one prop at a time until the admin cancels.
 local function placeProps(tool)
     while editing do
-        local aimed = QB.raycast.getCoords({ type = 'object', object = tool.model })
+        local aimed = QB.raycast.getCoords(tool.model and { type = 'object', object = tool.model } or {})
         local c = aimed and aimed.coords
         if not c then return end
 
         local offset, heading = ToShellOffset(editing.spawned, vector3(c.x, c.y, c.z), c.w or aimed.heading or 0.0)
         local props = copyProps(editing.key)
-        props[#props + 1] = { model = tool.model, offset = offset, heading = heading, list = tool.list, label = tool.label }
+        props[#props + 1] = {
+            model = tool.model, offset = offset, heading = heading, list = tool.list, label = tool.search.label,
+            progressLabel = tool.search.progressLabel, time = tool.search.time, anim = tool.search.anim, disable = tool.search.disable,
+        }
 
         local result, err = call('shells:props', editing.key, props)
         if not result then return toast(err) end
@@ -144,7 +212,6 @@ local function placeProps(tool)
     end
 end
 
--- Aim at a spot and read it: { x, y, z, w } or nil when the admin cancels.
 local function aim()
     local aimed = QB.raycast.getCoords({})
     local c = aimed and aimed.coords
@@ -152,7 +219,6 @@ local function aim()
     return { x = c.x, y = c.y, z = c.z, w = c.w or aimed.heading or 0.0 }
 end
 
--- The exit goes where you aim, inside the shell.
 local function placeExit()
     if not editing then return end
     local c = aim()
@@ -164,7 +230,6 @@ local function placeExit()
     toast('Exit saved.', 'success')
 end
 
--- Houses go where you aim, one after another, until you cancel. They all use the same shell.
 local function placeHouses(key)
     local placed = 0
     while true do
@@ -198,10 +263,6 @@ local function runPendingTool()
     elseif tool.kind == 'houses' then placeHouses(tool.key)
     elseif tool.kind == 'moveHouse' then moveHouse(tool.id) end
 end
-
--- ----------------------------------------------------------------------------
--- Views
--- ----------------------------------------------------------------------------
 
 local function listsView()
     local items = {}
@@ -288,7 +349,7 @@ local function listView()
 
     return {
         id = 'list', label = list.label, icon = 'Package',
-        content = { title = list.label, description = 'The items and amounts a prop gives. Used by every prop that has this list.', blocks = blocks },
+        content = { title = list.label, description = 'A prop gives one of these items, picked at random, with the amount set here. Used by every prop that has this list.', blocks = blocks },
     }
 end
 
@@ -318,12 +379,17 @@ local function propCards(props)
     for index, prop in ipairs(props) do
         cards[#cards + 1] = {
             id = tostring(index),
-            label = prop.label or prop.model,
-            icon = 'MapPin',
-            description = ('%s · %s'):format(prop.model, coordsLabel(prop.offset)),
-            metadata = { { label = 'Gives', value = listLabel(prop.list) } },
+            label = prop.label or prop.model or 'Search spot',
+            icon = prop.model and 'MapPin' or 'Square',
+            description = ('%s · %s'):format(prop.model or 'Box target', coordsLabel(prop.offset)),
+            metadata = (function()
+                local metadata = { { label = 'Gives', value = listLabel(prop.list) } }
+                for _, entry in ipairs(searchSummary(propSearch(prop))) do metadata[#metadata + 1] = entry end
+                return metadata
+            end)(),
             actions = {
                 { id = 'prop:list:' .. index, label = 'Change list', icon = 'Pencil', variant = 'primary' },
+                { id = 'prop:search:' .. index, label = 'Search settings', icon = 'Timer', variant = 'primary' },
                 { id = 'prop:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' },
             },
         }
@@ -359,13 +425,17 @@ local function shellView()
             },
         }
         blocks[#blocks + 1] = {
-            type = 'form', id = 'prop-place', title = 'Place props',
-            fields = {
-                { id = 'model', label = 'Prop model', type = 'text', required = true },
-                { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = 'none' },
-                { id = 'label', label = 'Target label', type = 'text', description = 'Optional. e.g. Search the fridge.' },
-            },
-            action = { id = 'prop:place', label = 'Aim and place props' },
+            type = 'form', id = 'prop-place', title = 'Place props or box targets',
+            fields = (function()
+                local fields = {
+                    { id = 'model', label = 'Prop model', type = 'text',
+                        description = 'Leave empty for no prop: a box target is placed where you aim instead.' },
+                    { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = 'none' },
+                }
+                for _, field in ipairs(searchFields(propSearch(nil))) do fields[#fields + 1] = field end
+                return fields
+            end)(),
+            action = { id = 'prop:place', label = 'Aim and place' },
         }
     elseif editing then
         blocks[#blocks + 1] = { type = 'empty', title = 'You are inside another shell. Leave it first.' }
@@ -375,6 +445,14 @@ local function shellView()
             actions = { { id = 'shell:enter', label = 'Enter the shell to edit', icon = 'Door', variant = 'primary' } },
         }
     end
+
+    blocks[#blocks + 1] = {
+        type = 'form', id = 'shell-break', title = 'Break-in item',
+        fields = { { id = 'breakItem', label = 'Item needed to break in', type = 'text',
+            default = setup.breakItem or Config.Robberies.House.defaults.breakItem,
+            description = 'The default for every house using this shell. A house can use a different one.' } },
+        action = { id = 'shell:breakItem', label = 'Save' },
+    }
 
     local props = propCards(setup.props)
     blocks[#blocks + 1] = { type = 'list', id = 'shell-props', layout = 'cards', columns = 3, title = ('Props (%d)'):format(#props), items = props, empty = 'No props yet. Enter the shell to place some.' }
@@ -455,6 +533,12 @@ local function houseView()
                         { id = 'cooldown', label = 'Cooldown (minutes)', type = 'number', min = 0, max = 1440, default = house.cooldown },
                         { id = 'security', label = 'Security system', type = 'select', default = house.security and 'enabled' or 'disabled',
                             options = { { value = 'enabled', label = 'Enabled' }, { value = 'disabled', label = 'Disabled' } } },
+                        { id = 'breakItem', label = 'Break-in item', type = 'text', default = house.breakItem or '',
+                            description = ('Empty uses the shell\'s item (%s).'):format((data.setups[house.shell] and data.setups[house.shell].breakItem) or Config.Robberies.House.defaults.breakItem) },
+                        { id = 'securityItem', label = 'Security item', type = 'text', default = house.securityItem or '',
+                            description = ('Also needed when the security system is on, and it alerts the police. Empty uses %s.'):format(Config.Robberies.House.defaults.securityItem) },
+                        { id = 'lowerZ', label = 'Shell depth', type = 'number', min = -300, max = 0, default = house.lowerZ or Config.Robberies.House.defaults.lowerZ,
+                            description = 'How far below the entrance the shell is spawned. Change it if the shell clips into something.' },
                         { id = 'timeLimit', label = 'Robbery times', type = 'select', default = house.hours and 'limited' or 'any',
                             options = { { value = 'any', label = 'Any time' }, { value = 'limited', label = 'Only between the hours below' } } },
                         { id = 'timeFrom', label = 'From hour (0-23)', type = 'number', min = 0, max = 23, default = hours.from },
@@ -489,10 +573,6 @@ local function fail(message)
     return refresh(notice(message, 'destructive'))
 end
 
--- ----------------------------------------------------------------------------
--- Actions
--- ----------------------------------------------------------------------------
-
 local function askAmount(label, title, current)
     local result = QB.nui.openInputDialog({
         { id = 'amount', label = 'Amount', type = 'number', min = 1, max = Limits.itemAmount, default = current or 1, required = true },
@@ -503,7 +583,6 @@ local function askAmount(label, title, current)
     return amount and math.floor(amount) or nil
 end
 
--- Item list actions
 local function copyItems(list)
     local items = {}
     for index, entry in ipairs(list.items) do items[index] = { item = entry.item, amount = entry.amount } end
@@ -513,8 +592,6 @@ end
 local function saveItems(list, items, message)
     local result, err = call('lists:items', list.id, items)
     if not result then return fail(err) end
-
-    -- keep the search marks right: an item added or removed changes its "already in the list" note
     local inList = {}
     for _, entry in ipairs(items) do inList[entry.item] = true end
     for _, found in ipairs(search.results) do found.added = inList[found.name] == true end
@@ -604,7 +681,6 @@ local function listAction(actionId, values)
     return refresh()
 end
 
--- Shell actions
 local function setProps(props, message)
     local result, err = call('shells:props', selectedShell, props)
     if not result then return fail(err) end
@@ -634,9 +710,16 @@ local function shellAction(actionId, values)
     end
 
     if actionId == 'shell:exit' then
-        if not (editing and editing.key == selectedShell) then return fail('Enter the shell first.') end
+        local reason = notInsideReason(selectedShell)
+        if reason then return fail(reason) end
         pendingTool, currentView = { kind = 'exit' }, 'shell'
         return { close = true }
+    end
+
+    if actionId == 'shell:breakItem' then
+        local result, err = call('shells:breakItem', selectedShell, text(values.breakItem))
+        if not result then return fail(err) end
+        return refresh(notice('Saved.'))
     end
 
     if actionId == 'shell:clear' then
@@ -648,14 +731,20 @@ local function shellAction(actionId, values)
     end
 
     if actionId == 'prop:place' then
-        if not (editing and editing.key == selectedShell) then return fail('Enter the shell first.') end
+        local reason = notInsideReason(selectedShell)
+        if reason then return fail(reason) end
         local model = text(values.model)
-        if model == '' or not IsModelInCdimage(joaat(model)) then return fail('Unknown prop model.') end
+        if model == '' then
+            model = nil -- no prop: a box target
+        elseif not IsModelInCdimage(joaat(model)) then
+            return fail('Unknown prop model.')
+        end
         local listId = text(values.list)
+        local search, searchErr = searchFromValues(values)
+        if not search then return fail(searchErr) end
         pendingTool = {
-            kind = 'props', model = model,
+            kind = 'props', model = model, search = search,
             list = listId ~= '' and listId ~= 'none' and listId or nil,
-            label = text(values.label) ~= '' and text(values.label) or nil,
         }
         currentView = 'shell'
         return { close = true }
@@ -670,6 +759,22 @@ local function shellAction(actionId, values)
         return setProps(props, 'Prop deleted.')
     end
 
+    index = tonumber(actionId:match('^prop:search:(%d+)$'))
+    if index then
+        local props = copyProps(selectedShell)
+        local prop = props[index]
+        if not prop then return refresh() end
+
+        local result = QB.nui.openInputDialog(searchFields(propSearch(prop)), 'Search settings', prop.label or prop.model or 'Search spot')
+        if not result or result.cancelled then return refresh() end
+
+        local search, err = searchFromValues(result.values or {})
+        if not search then return fail(err) end
+        prop.label, prop.progressLabel = search.label, search.progressLabel
+        prop.time, prop.anim, prop.disable = search.time, search.anim, search.disable
+        return setProps(props, 'Search settings saved.')
+    end
+
     index = tonumber(actionId:match('^prop:list:(%d+)$'))
     if index then
         local props = copyProps(selectedShell)
@@ -678,7 +783,7 @@ local function shellAction(actionId, values)
 
         local result = QB.nui.openInputDialog({
             { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = prop.list or 'none' },
-        }, 'Change list', prop.label or prop.model)
+        }, 'Change list', prop.label or prop.model or 'Search spot')
         if not result or result.cancelled then return refresh() end
 
         local chosen = result.values and result.values.list
@@ -714,6 +819,9 @@ local function houseAction(actionId, values)
             minPolice = tonumber(values.minPolice),
             cooldown = tonumber(values.cooldown),
             security = values.security == 'enabled',
+            breakItem = text(values.breakItem),
+            securityItem = text(values.securityItem),
+            lowerZ = (tonumber(values.lowerZ) ~= Config.Robberies.House.defaults.lowerZ) and tonumber(values.lowerZ) or nil,
             timeLimit = values.timeLimit == 'limited',
             timeFrom = tonumber(values.timeFrom),
             timeTo = tonumber(values.timeTo),
@@ -780,7 +888,6 @@ RegisterNetEvent('qbrobberies:creator:open', function()
     CreateThread(open)
 end)
 
--- Closing the menu while inside a shell leaves you in it: open the creator again to leave, or stop the resource.
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
     leaveShell()
