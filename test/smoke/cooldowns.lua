@@ -7,7 +7,7 @@ QB = {
     callback = { register = function(name, fn) callbacks[name] = fn end },
 }
 Config, QbRobberies = {}, {}
-GetCurrentResourceName = function() return 'qbrobberies' end
+GetCurrentResourceName = function() return 'kora_robberies' end
 GetGameTimer = function() return now end
 GetResourceState = function() return 'started' end
 RegisterNetEvent = function(name, fn) events[name] = fn end
@@ -22,13 +22,13 @@ local function grant(kind, amount)
     return true
 end
 exports = {
-    qbcore = {
+    kora_core = {
         getPlayersByJobType = function() return {} end,
         addMoney = function(_, _, _, amount) return grant('money', amount) end,
         addItem = function(_, _, _, amount) return grant('item', amount) end,
     },
-    qbdispatch = { createCall = function() return true end },
-    qbdoorlock = {
+    kora_dispatch = { createCall = function() return true end },
+    kora_doorlock = {
         getDoorState = function(_, id) return doors[id] end,
         setDoorState = function(_, id, locked) doors[id] = locked; return true end,
     },

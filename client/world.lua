@@ -22,7 +22,7 @@ local function spawnProps(id)
     CreateThread(function()
         for _, prop in ipairs(definition.props) do
             if not live.loaded then return end
-            -- qblib's entity module intentionally creates local, non-networked
+            -- kora_lib's entity module intentionally creates local, non-networked
             -- entities. These decorative robbery props are never networked,
             -- which keeps strict entity lockdown enabled server-wide.
             local entity = QB.entities.create(prop.model, vector4(prop.coords.x, prop.coords.y, prop.coords.z, prop.coords.w or 0), { preset = 'static' })

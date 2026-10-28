@@ -1,6 +1,6 @@
 -- The AppShell is the creator's permanent interface. It only gathers admin
 -- intent; every mutation travels to the server and is validated/persisted
--- there. World capture is deliberately delegated to qblib's zone and placement
+-- there. World capture is deliberately delegated to kora_lib's zone and placement
 -- creators, so coordinates never need to be typed or pasted.
 QbRobberies = QbRobberies or {}
 local Creator = { admin = false, snapshot = {} }

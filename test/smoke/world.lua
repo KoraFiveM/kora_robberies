@@ -34,7 +34,7 @@ for _, order in ipairs({ { 1, 2 }, { 2, 1 } }) do
     CreateThread = function(fn) fn() end
     RegisterNetEvent = function(name, fn) events[name] = fn end
     AddEventHandler = function(name, fn) hooks[name] = fn end
-    GetCurrentResourceName = function() return 'qbrobberies' end
+    GetCurrentResourceName = function() return 'kora_robberies' end
     TriggerServerEvent = function(name, id) abandoned[#abandoned + 1] = { name = name, id = id } end
     dofile('config.lua')
     dofile('shared/schema.lua')
@@ -95,7 +95,7 @@ for _, order in ipairs({ { 1, 2 }, { 2, 1 } }) do
     interact()
     hooks.onClientResourceStop('foreign')
     H.equal(#abandoned, 0, 'foreign resource stop retains world')
-    hooks.onClientResourceStop('qbrobberies')
+    hooks.onClientResourceStop('kora_robberies')
     H.equal(abandoned[1].name, 'qbrobberies:server:abandon', 'own stop retains original abandonment event')
     H.equal(abandoned[1].id, 'test', 'own stop abandons active robbery')
     H.equal(next(World.live), nil, 'own stop clears all live membership')

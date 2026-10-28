@@ -18,7 +18,7 @@ function State.broadcast(target)
 end
 
 function State.isAdmin(source)
-    local ok, allowed = pcall(function() return exports.qbcore:hasPermission(source, Config.Robberies.adminPermission) end)
+    local ok, allowed = pcall(function() return exports.kora_core:hasPermission(source, Config.Robberies.adminPermission) end)
     return ok and allowed == true
 end
 
@@ -69,21 +69,21 @@ function State.at(source, point, distance)
 end
 
 function State.policeCount()
-    local ok, officers = pcall(function() return exports.qbcore:getPlayersByJobType(Config.Robberies.policeJobType, true) end)
+    local ok, officers = pcall(function() return exports.kora_core:getPlayersByJobType(Config.Robberies.policeJobType, true) end)
     return ok and type(officers) == 'table' and #officers or 0
 end
 
 function State.setDoor(session, doorId, locked)
-    local ok, previous = pcall(function() return exports.qbdoorlock:getDoorState(doorId) end)
+    local ok, previous = pcall(function() return exports.kora_doorlock:getDoorState(doorId) end)
     if not ok or type(previous) ~= 'boolean' then return false, ('Unknown qbdoorlock id "%s".'):format(doorId) end
     if session.doorStates[doorId] == nil then session.doorStates[doorId] = previous end
-    local changed = exports.qbdoorlock:setDoorState(doorId, locked)
+    local changed = exports.kora_doorlock:setDoorState(doorId, locked)
     return changed == true
 end
 
 function State.restoreDoors(session)
     for doorId, locked in pairs(session.doorStates) do
-        pcall(function() exports.qbdoorlock:setDoorState(doorId, locked) end)
+        pcall(function() exports.kora_doorlock:setDoorState(doorId, locked) end)
     end
 end
 
@@ -102,11 +102,11 @@ function State.raiseAlert(definition)
         coords = definition.start, jobTypes = { Config.Robberies.policeJobType },
         duration = Config.Robberies.sessionTimeout,
     }
-    if GetResourceState('qbdispatch') == 'started' then
-        local ok = pcall(function() return exports.qbdispatch:createCall(payload) end)
+    if GetResourceState('kora_dispatch') == 'started' then
+        local ok = pcall(function() return exports.kora_dispatch:createCall(payload) end)
         if ok then return end
     end
-    local ok, officers = pcall(function() return exports.qbcore:getPlayersByJobType(Config.Robberies.policeJobType, true) end)
+    local ok, officers = pcall(function() return exports.kora_core:getPlayersByJobType(Config.Robberies.policeJobType, true) end)
     if ok then
         for _, officer in ipairs(officers or {}) do
             QB.notify.send(officer, { title = 'Robbery in progress', message = definition.label, type = 'warning' })
@@ -121,9 +121,9 @@ function State.reward(source, step)
             local amount = math.random(reward.min, reward.max)
             local ok
             if reward.kind == 'money' then
-                ok = exports.qbcore:addMoney(source, reward.name, amount, 'robbery-reward')
+                ok = exports.kora_core:addMoney(source, reward.name, amount, 'robbery-reward')
             else
-                ok = exports.qbcore:addItem(source, reward.name, amount, nil, nil, 'robbery-reward')
+                ok = exports.kora_core:addItem(source, reward.name, amount, nil, nil, 'robbery-reward')
             end
             if ok then granted[#granted + 1] = ('%dx %s'):format(amount, reward.name) end
         end

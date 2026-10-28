@@ -15,7 +15,7 @@ local function mutation(source, id, transform)
 end
 
 local function validDoor(doorId)
-    local ok, locked = pcall(function() return exports.qbdoorlock:getDoorState(doorId) end)
+    local ok, locked = pcall(function() return exports.kora_doorlock:getDoorState(doorId) end)
     return ok and type(locked) == 'boolean'
 end
 
@@ -278,7 +278,7 @@ end)
 
 AddEventHandler('onResourceStop', function(resource)
     if resource ~= RESOURCE then return end
-    -- qbdoorlock state is external server state, so it must be restored even
+    -- kora_doorlock state is external server state, so it must be restored even
     -- when this resource is restarted while a robbery is in progress.
     local sessions = {}
     for _, session in pairs(State.sessions) do sessions[#sessions + 1] = session end
