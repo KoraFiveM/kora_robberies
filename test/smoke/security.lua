@@ -18,7 +18,7 @@ H.ok(server:find('State.at(source, step.coords', 1, true), 'step completion is d
 H.ok(server:find('QB.minigames.consumeProof', 1, true), 'minigame proof is consumed on the server')
 H.ok(state:find('State.restoreDoors(session)', 1, true), 'door state is restored when a session stops')
 H.ok(state:find('exports.kora_doorlock:setDoorState', 1, true), 'doors are changed through qbdoorlock')
-H.ok(client:find('QB.entities.create', 1, true), 'decorative props use qblib entities')
+H.ok(client:find('QB.entities.create', 1, true), 'decorative props use kora_lib entities')
 H.ok(client:find('non-networked', 1, true), 'strict-lockdown local entity rule is documented at the spawn')
 H.ok(not client:find('CreateObject', 1, true) and not client:find('CreatePed', 1, true), 'client never directly creates entities')
 

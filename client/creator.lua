@@ -218,14 +218,14 @@ definition = function(definitions)
                     } },
                     { type = 'details', title = 'start access', items = { { label = 'Coordinates', value = ('%.2f, %.2f, %.2f'):format(d.start.x, d.start.y, d.start.z) }, { label = 'Radius', value = ('%.1f m'):format(d.startRadius) }, { label = 'Unlock on start', value = #d.startDoors > 0 and table.concat(d.startDoors, ', ') or 'None' } } },
                     { type = 'list', title = 'Robbery steps', layout = 'list', items = steps, empty = 'Place one or more steps to make this robbery playable.' },
-                    { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = 'Place optional scenery. qblib spawns it non-networked on each nearby client.' },
+                    { type = 'list', title = 'Client-local decorative props', layout = 'list', items = props, empty = 'Place optional scenery. kora_lib spawns it non-networked on each nearby client.' },
                 },
             },
         }
     end
     return {
         id = APP_ID, title = 'Robbery Creator', description = 'Live in-game robbery authoring', icon = 'Mask', accent = '#dc2626', defaultView = 'overview',
-        footer = 'Zones, placement, local entities, minigames, and focus are provided by qblib.', navigation = navigation,
+        footer = 'Zones, placement, local entities, minigames, and focus are provided by kora_lib.', navigation = navigation,
         onAction = function(actionId, context)
             local id = idFromView(context and context.viewId)
             if actionId == 'creator:refresh' then
