@@ -14,7 +14,7 @@ function SpawnShell(def, coords)
     end
 
     local ids = result.id
-
+    local handle = ids
     while type(handle) == 'table' do handle = handle[1] end
     if type(handle) ~= 'number' then
         QB.print.warn(('[qbrobberies] %s returned no shell handle: %s'):format(tostring(def.label), json.encode(ids)))

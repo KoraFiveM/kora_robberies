@@ -9,7 +9,7 @@ local function notify(message, kind)
 end
 
 local function removeZone(id)
-    if id then pcall(function() exports.qbtarget:removeZone(id) end) end
+    if id then pcall(function() exports.kora_target:removeZone(id) end) end
 end
 
 local function cleanupInside()
@@ -17,7 +17,7 @@ local function cleanupInside()
     removeZone(inside.exitZone)
     for _, zone in ipairs(inside.zones) do removeZone(zone) end
     for _, object in ipairs(inside.objects) do
-        pcall(function() exports.qbtarget:removeEntity(object) end)
+        pcall(function() exports.kora_target:removeEntity(object) end)
         if DoesEntityExist(object) then DeleteEntity(object) end
     end
     RemoveShell(inside.spawned)
@@ -83,7 +83,7 @@ local function buildProps(info)
         if not prop.model then
             if prop.loot then
                 targets = targets + 1
-                inside.zones[#inside.zones + 1] = exports.qbtarget:addBoxZone({
+                inside.zones[#inside.zones + 1] = exports.kora_target:addBoxZone({
                     coords = vector3(world.x, world.y, world.z),
                     size = vector3(1.5, 1.5, 2.0),
                     options = { searchOption(index, prop) },
@@ -99,7 +99,7 @@ local function buildProps(info)
 
                 if prop.loot then
                     targets = targets + 1
-                    exports.qbtarget:addEntity(object, { searchOption(index, prop) })
+                    exports.kora_target:addEntity(object, { searchOption(index, prop) })
                 end
             end
         end
@@ -130,7 +130,7 @@ local function enterHouse(id, door, info)
     inside = { id = id, house = house, spawned = spawned, objects = {}, zones = {}, states = info.states or {}, searching = false }
 
     local world = FromShellOffset(spawned, info.exit, 0.0)
-    inside.exitZone = exports.qbtarget:addBoxZone({
+    inside.exitZone = exports.kora_target:addBoxZone({
         coords = vector3(world.x, world.y, world.z),
         size = vector3(1.5, 1.5, 2.0),
         options = { { label = 'Leave', icon = 'fa-solid fa-door-open', onSelect = leaveHouse } },
@@ -212,7 +212,7 @@ local function loadDoors()
     for _, house in ipairs(list) do
         local c = house.coords
         if house.state then houseStates[house.id] = { state = house.state, remaining = house.remaining or 0, at = GetGameTimer() } end
-        doors[house.id] = exports.qbtarget:addBoxZone({
+        doors[house.id] = exports.kora_target:addBoxZone({
             coords = vector3(c.x, c.y, c.z),
             size = vector3(1.5, 1.5, 2.0),
             rotation = c.w or 0.0,

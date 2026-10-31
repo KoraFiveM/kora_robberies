@@ -260,11 +260,18 @@ adminCallback('qbrobberies:creator:stores:delete', function(_, id)
     return payload()
 end)
 
-RegisterCommand(Config.Creator.command, function(source)
-    if not isAdmin(source) then
-        QB.print.warn(('[qbrobberies] player %s was denied /%s: they do not have the "%s" ace'):format(source, Config.Creator.command, Config.Creator.ace))
-        QB.notify.send(source, { title = 'House Creator', message = 'Admin permission required.', type = 'error' })
-        return
-    end
+QB.commands.add(Config.Creator.command, 'Open the robbery creator', nil, false, function(source)
     TriggerClientEvent('qbrobberies:creator:open', source)
-end, false)
+end, {
+    checkPermission = function(source)
+        return isAdmin(source)
+    end,
+    notify = function(source, message, type_)
+        if source == 0 then
+            print(('[qbrobberies] %s'):format(message))
+            return
+        end
+        QB.notify.send(source, { title = 'House Creator', message = message, type = type_ })
+    end,
+    resource = GetCurrentResourceName(),
+})

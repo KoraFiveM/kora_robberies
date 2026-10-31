@@ -1,5 +1,5 @@
 Config = Config or {}
-local int = exports.qbinterior
+local int = exports.kora_interior
 Config.Robberies = {
     House = {
         defaults = {
@@ -133,7 +133,7 @@ Config.Robberies = {
 
 -- The in-game creator. Players need this ace to open it.
 Config.Creator = {
-    command = 'houseCreator',
+    command = 'robberyCreator',
     ace = 'command',
 }
 

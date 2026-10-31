@@ -84,12 +84,12 @@ local function takeLoot(storeId, index)
 end
 
 local function clearZones()
-    for _, zone in ipairs(zones) do pcall(function() exports.qbtarget:removeZone(zone) end) end
+    for _, zone in ipairs(zones) do pcall(function() exports.kora_target:removeZone(zone) end) end
     zones = {}
 end
 
 local function addZone(coords, options)
-    zones[#zones + 1] = exports.qbtarget:addBoxZone({
+    zones[#zones + 1] = exports.kora_target:addBoxZone({
         coords = vector3(coords.x, coords.y, coords.z),
         size = vector3(1.0, 1.0, 1.0),
         options = options,

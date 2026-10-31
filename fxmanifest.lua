@@ -7,15 +7,15 @@ author 'qbcore2'
 version '1.0.0'
 description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
 
-dependency 'qblib'
-dependency 'qbsql'
-dependency 'qbcore'
-dependency 'qbinterior'
+dependency 'kora_lib'
+dependency 'kora_sql'
+dependency 'kora_core'
+dependency 'kora_interior'
 
 shared_scripts {
-    '@qblib/init.lua',
-    '@qbsql/init.lua',
-    '@qbcore/init.lua',
+    '@kora_lib/init.lua',
+    '@kora_sql/init.lua',
+    '@kora_core/init.lua',
     'config.lua',
     'shared/constants.lua',
     'shared/shells.lua',
