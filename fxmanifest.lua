@@ -7,32 +7,36 @@ name 'kora_robberies'
 provide 'qbrobberies'
 author 'qbcore2'
 version '1.0.0'
-description 'In-game robbery creator with server-authoritative sessions'
+description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
 
 dependency 'kora_lib'
 dependency 'kora_sql'
 dependency 'kora_core'
-dependency 'kora_doorlock'
+dependency 'kora_interior'
 
 shared_scripts {
     '@kora_lib/init.lua',
     '@kora_sql/init.lua',
     '@kora_core/init.lua',
     'config.lua',
-    'shared/schema.lua',
+    'shared/constants.lua',
+    'shared/shells.lua',
 }
 
 client_scripts {
-    'client/world.lua',
+    'client/shell.lua',
     'client/creator.lua',
+    'client/robbery.lua',
+    'client/store.lua',
     'client/main.lua',
 }
 
+-- Order matters here: each file uses the ones before it.
 server_scripts {
-    'server/state.lua',
-    'server/main.lua',
-}
-
-files {
-    'sql/001_robberies.sql',
+    'server/_functions.lua',
+    'server/rules.lua',
+    'server/data.lua',
+    'server/creator.lua',
+    'server/robbery.lua',
+    'server/store.lua',
 }
