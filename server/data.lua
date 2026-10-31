@@ -83,7 +83,7 @@ end
 
 CreateThread(function()
     Wait(1000)
-    while GetResourceState('qbsql') ~= 'started' do Wait(500) end
+    while GetResourceState('kora_sql') ~= 'started' do Wait(500) end
 
     -- The tables are also in sql/qbrobberies.sql. This only saves forgetting to run it.
     pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_lists` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
