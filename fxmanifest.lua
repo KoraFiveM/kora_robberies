@@ -2,7 +2,9 @@ fx_version 'cerulean'
 game 'gta5'
 lua54 'yes'
 
-name 'qbrobberies'
+name 'kora_robberies'
+-- Keep the legacy resource name resolvable for exports['qbrobberies'] callers.
+provide 'qbrobberies'
 author 'qbcore2'
 version '1.0.0'
 description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
