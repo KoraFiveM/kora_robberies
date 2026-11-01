@@ -199,11 +199,6 @@ adminCallback('qbrobberies:creator:houses:delete', function(_, id)
     return payload()
 end)
 
-
--- ----------------------------------------------------------------------------
--- Stores
--- ----------------------------------------------------------------------------
-
 local function updateStore(id, change)
     local store = validId(id) and Stores[id]
     if not store then return fail('Unknown store.') end
