@@ -216,7 +216,7 @@ QB.callback.register('qbrobberies:prop:begin', function(src, houseId, index)
     if state.looted then return false, 'Already searched.' end
     if isBusy(state) then return false, 'Someone is already searching this.' end
 
-    for otherIndex, other in pairs(session.props) do
+    for _, other in pairs(session.props) do
         if other.busyBy == src and isBusy(other) then return false, 'Finish what you are doing first.' end
     end
 

@@ -36,7 +36,7 @@ function SaveStore(id, store)
     local ok, err = dbSave('stores', id, store)
     if not ok then return false, err end
     Stores[id] = store
-    if ResetStoreState then ResetStoreState(id) end -- the registers and safes may have moved
+    ResetStoreState(id) -- the registers and safes may have moved
     TriggerClientEvent('qbrobberies:client:reloadStores', -1)
     return true
 end
@@ -45,7 +45,7 @@ function DeleteStore(id)
     local ok, err = dbDelete('stores', id)
     if not ok then return false, err end
     Stores[id] = nil
-    if ResetStoreState then ResetStoreState(id) end
+    ResetStoreState(id)
     TriggerClientEvent('qbrobberies:client:reloadStores', -1)
     return true
 end

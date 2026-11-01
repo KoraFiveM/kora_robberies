@@ -68,10 +68,6 @@ local function pay(src, range)
     return exports['qb-inventory']:AddItem(src, defaults.cashItem, amount) and amount or nil
 end
 
-local function clearCode(storeId)
-    stateOf(storeId).code = nil
-end
-
 local function stickyCode(storeId)
     local state = stateOf(storeId)
     if not state.code then
@@ -116,7 +112,7 @@ QB.callback.register('qbrobberies:register:begin', function(src, storeId, index)
     if register.robbed then return false, 'This register is empty.' end
     if isBusy(register) then return false, 'Someone is already robbing this.' end
 
-    for otherIndex, other in pairs(stateOf(storeId).registers) do
+    for _, other in pairs(stateOf(storeId).registers) do
         if other.busyBy == src and isBusy(other) then return false, 'Finish what you are doing first.' end
     end
 
@@ -177,7 +173,7 @@ end
 
 local function emptySafe(storeId, index, safe)
     safe.robbed, safe.blown, safe.blowing = true, false, false
-    clearCode(storeId)
+    stateOf(storeId).code = nil
     broadcast(storeId, 'safes', index, 'robbed')
     later(storeId, function()
         safe.robbed = false

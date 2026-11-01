@@ -128,10 +128,18 @@ local function call(name, ...)
     return result
 end
 
-local function copyProps(key)
-    local props = {}
-    for index, prop in ipairs(setupFor(key).props) do props[index] = prop end
-    return props
+local function copyList(list)
+    local copy = {}
+    for index, entry in ipairs(list) do copy[index] = entry end
+    return copy
+end
+
+local function removeAt(list, index)
+    local kept = {}
+    for position, entry in ipairs(list) do
+        if position ~= index then kept[#kept + 1] = entry end
+    end
+    return kept
 end
 
 local function clearPreview()
@@ -200,7 +208,7 @@ local function placeProps(tool)
         if not c then return end
 
         local offset, heading = ToShellOffset(editing.spawned, vector3(c.x, c.y, c.z), c.w or aimed.heading or 0.0)
-        local props = copyProps(editing.key)
+        local props = copyList(setupFor(editing.key).props)
         props[#props + 1] = {
             model = tool.model, offset = offset, heading = heading, list = tool.list, label = tool.search.label,
             progressLabel = tool.search.progressLabel, time = tool.search.time, anim = tool.search.anim, disable = tool.search.disable,
@@ -250,12 +258,6 @@ local function moveHouse(id)
     local result, err = call('houses:coords', id, c)
     if not result then return toast(err) end
     toast('Entrance moved.', 'success')
-end
-
-local function copyList(list)
-    local copy = {}
-    for index, entry in ipairs(list) do copy[index] = entry end
-    return copy
 end
 
 -- Aims and saves one register or safe at a time, until the admin cancels. tool.field is 'registers' or 'safes'.
@@ -402,16 +404,14 @@ end
 local function propCards(props)
     local cards = {}
     for index, prop in ipairs(props) do
+        local metadata = { { label = 'Gives', value = listLabel(prop.list) } }
+        for _, entry in ipairs(searchSummary(propSearch(prop))) do metadata[#metadata + 1] = entry end
         cards[#cards + 1] = {
             id = tostring(index),
             label = prop.label or prop.model or 'Search spot',
             icon = prop.model and 'MapPin' or 'Square',
             description = ('%s · %s'):format(prop.model or 'Box target', coordsLabel(prop.offset)),
-            metadata = (function()
-                local metadata = { { label = 'Gives', value = listLabel(prop.list) } }
-                for _, entry in ipairs(searchSummary(propSearch(prop))) do metadata[#metadata + 1] = entry end
-                return metadata
-            end)(),
+            metadata = metadata,
             actions = {
                 { id = 'prop:list:' .. index, label = 'Change list', icon = 'Pencil', variant = 'primary' },
                 { id = 'prop:search:' .. index, label = 'Search settings', icon = 'Timer', variant = 'primary' },
@@ -449,17 +449,15 @@ local function shellView()
                 { id = 'shell:leave', label = 'Leave the shell', icon = 'X' },
             },
         }
+        local fields = {
+            { id = 'model', label = 'Prop model', type = 'text',
+                description = 'Leave empty for no prop: a box target is placed where you aim instead.' },
+            { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = 'none' },
+        }
+        for _, field in ipairs(searchFields(propSearch(nil))) do fields[#fields + 1] = field end
         blocks[#blocks + 1] = {
             type = 'form', id = 'prop-place', title = 'Place props or box targets',
-            fields = (function()
-                local fields = {
-                    { id = 'model', label = 'Prop model', type = 'text',
-                        description = 'Leave empty for no prop: a box target is placed where you aim instead.' },
-                    { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = 'none' },
-                }
-                for _, field in ipairs(searchFields(propSearch(nil))) do fields[#fields + 1] = field end
-                return fields
-            end)(),
+            fields = fields,
             action = { id = 'prop:place', label = 'Aim and place' },
         }
     elseif editing then
@@ -901,16 +899,12 @@ local function shellAction(actionId, values)
 
     local index = tonumber(actionId:match('^prop:remove:(%d+)$'))
     if index then
-        local props = {}
-        for position, prop in ipairs(copyProps(selectedShell)) do
-            if position ~= index then props[#props + 1] = prop end
-        end
-        return setProps(props, 'Prop deleted.')
+        return setProps(removeAt(setupFor(selectedShell).props, index), 'Prop deleted.')
     end
 
     index = tonumber(actionId:match('^prop:search:(%d+)$'))
     if index then
-        local props = copyProps(selectedShell)
+        local props = copyList(setupFor(selectedShell).props)
         local prop = props[index]
         if not prop then return refresh() end
 
@@ -926,7 +920,7 @@ local function shellAction(actionId, values)
 
     index = tonumber(actionId:match('^prop:list:(%d+)$'))
     if index then
-        local props = copyProps(selectedShell)
+        local props = copyList(setupFor(selectedShell).props)
         local prop = props[index]
         if not prop then return refresh() end
 
@@ -943,7 +937,6 @@ local function shellAction(actionId, values)
     return refresh()
 end
 
--- House actions
 local function houseAction(actionId, values)
     if actionId == 'house:create' then
         local key = text(values.shell)
@@ -995,15 +988,6 @@ local function houseAction(actionId, values)
     end
 
     return refresh()
-end
-
--- Store actions
-local function removeAt(list, index)
-    local kept = {}
-    for position, entry in ipairs(list) do
-        if position ~= index then kept[#kept + 1] = entry end
-    end
-    return kept
 end
 
 local function storeAction(actionId, values)

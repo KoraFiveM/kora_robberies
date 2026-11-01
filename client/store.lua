@@ -53,7 +53,6 @@ local function robRegister(storeId, index)
     if finishErr then notify(finishErr) end
 end
 
-
 local function enterCode(storeId, index)
     local input = QB.nui.openInputDialog({
         { id = 'code', label = 'Code', type = 'number', required = true },

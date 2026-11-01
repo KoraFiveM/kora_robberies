@@ -43,7 +43,7 @@ function SpawnShell(def, coords)
     end
 
     local poi = type(ids) == 'table' and type(ids[2]) == 'table' and ids[2] or nil
-    local exitOffset = poi and (type(poi.exit) == 'table' and poi.exit or nil) or nil
+    local exitOffset = poi and type(poi.exit) == 'table' and poi.exit or nil
 
     return {
         ids = ids, shell = shell, exit = result.exit, exitOffset = exitOffset,
