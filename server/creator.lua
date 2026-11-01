@@ -48,10 +48,7 @@ local function payload()
     return { lists = lists, setups = Setups, houses = houses, stores = stores, items = items }
 end
 
-adminCallback('qbrobberies:creator:get', function()
-    return payload()
-end)
-
+adminCallback('qbrobberies:creator:get', payload)
 
 adminCallback('qbrobberies:creator:lists:create', function(_, label)
     label = trim(label, 48)
@@ -97,7 +94,6 @@ adminCallback('qbrobberies:creator:lists:delete', function(_, id)
     if not ok then return fail(err or 'Failed to delete the list.') end
     return payload()
 end)
-
 
 local function updateSetup(key, change)
     if not HouseShellByKey[key] then return fail('Unknown shell.') end

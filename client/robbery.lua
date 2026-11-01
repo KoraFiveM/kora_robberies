@@ -26,13 +26,9 @@ end
 
 local function leaveHouse()
     if not inside then return end
-    local house = inside.house
-
     QB.callback.trigger('qbrobberies:leave', inside.id)
-    QB.visuals.fade(house.coords)
+    QB.visuals.fade(inside.house.coords)
     cleanupInside()
-
-    
 end
 
 local function searchProp(index)
@@ -138,12 +134,10 @@ local function enterHouse(id, door, info)
 
     buildProps(info)
 
-    local ped = PlayerPedId()
     RequestCollisionAtCoord(world.x, world.y, world.z)
-    SetEntityCoords(ped, world.x, world.y, world.z)
+    SetEntityCoords(PlayerPedId(), world.x, world.y, world.z)
     Wait(300)
 end
-
 
 local function stateOf(id)
     local entry = houseStates[id]

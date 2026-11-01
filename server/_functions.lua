@@ -57,12 +57,11 @@ function makeId(label, isTaken)
     return id
 end
 
-
 function allItems()
     local ok, items = pcall(function() return exports['qb-core']:GetShared('Items') end)
     if ok and type(items) == 'table' then return items end
-    ok, items = pcall(function() return exports.kora_core:getShared('items') end)
-    return ok and type(items) == 'table' and items or {}
+    items = exports.kora_core:getShared('items')
+    return type(items) == 'table' and items or {}
 end
 
 function itemExists(item)
@@ -146,8 +145,8 @@ end)
 
 local warned = false
 function playerJob(src)
-    local ok, player = pcall(function() return exports.kora_core:getPlayer(src) end)
-    local data = ok and type(player) == 'table' and (player.PlayerData or player.playerData or player.data or player) or nil
+    local player = exports.kora_core:getPlayer(src)
+    local data = type(player) == 'table' and (player.PlayerData or player.playerData or player.data or player) or nil
     local job = type(data) == 'table' and data.job
     if type(job) ~= 'table' then
         if not warned then

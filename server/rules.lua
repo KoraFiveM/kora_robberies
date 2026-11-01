@@ -1,4 +1,3 @@
-
 local patterns = {
     name = '^[%w_%-%.]+$', -- items and props
     anim = '^[%w_@%-%.]+$', -- animation dictionaries and clips
@@ -199,13 +198,12 @@ function readHouse(id, raw)
     local coords = cleanEntrance(stored.coords)
     if not (coords and type(stored.shell) == 'string') then return nil end
 
-    local house = cleanHouseDetails({
+    return cleanHouseDetails({
         label = stored.label or id, minPolice = stored.minPolice or 0, cooldown = stored.cooldown or 0,
         security = stored.security, breakItem = stored.breakItem, securityItem = stored.securityItem, lowerZ = stored.lowerZ,
         timeLimit = type(stored.hours) == 'table',
         timeFrom = type(stored.hours) == 'table' and stored.hours.from, timeTo = type(stored.hours) == 'table' and stored.hours.to,
     }, { shell = stored.shell, coords = coords })
-    return house
 end
 
 function newStore(label)
