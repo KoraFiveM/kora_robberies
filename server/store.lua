@@ -105,10 +105,6 @@ QB.callback.register('qbrobberies:stores', function()
     return list
 end)
 
--- ----------------------------------------------------------------------------
--- Registers: begin, then finish once the player has done the progress bar and the minigame
--- ----------------------------------------------------------------------------
-
 QB.callback.register('qbrobberies:register:begin', function(src, storeId, index)
     if onCooldown(src, 'register') then return false, 'Slow down.' end
     startCooldown(src, 'register', 500)

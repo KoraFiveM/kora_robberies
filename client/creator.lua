@@ -578,10 +578,6 @@ local function houseView()
     }
 end
 
--- ----------------------------------------------------------------------------
--- Stores: registers and safes
--- ----------------------------------------------------------------------------
-
 -- A register searches like a prop, with its own words for the target and the progress bar.
 local function registerSearch(register)
     local search = propSearch(register)
@@ -1123,8 +1119,6 @@ QB.nui.registerApp({
     navigation = { { id = 'lists', label = 'Item lists', icon = 'Package', content = { title = 'Item lists', blocks = {} } } },
     onAction = onAction,
 })
-
--- ----------------------------------------------------------------------------
 
 local function open()
     local result, err = call('get')

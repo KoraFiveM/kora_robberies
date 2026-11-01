@@ -208,10 +208,6 @@ function readHouse(id, raw)
     return house
 end
 
--- ----------------------------------------------------------------------------
--- Stores
--- ----------------------------------------------------------------------------
-
 function newStore(label)
     return { label = label, minPolice = Config.Robberies.Store.defaults.minPolice or 0, registers = {}, safes = {} }
 end
