@@ -83,13 +83,23 @@ end
 
 CreateThread(function()
     Wait(1000)
-    while GetResourceState('kora_sql') ~= 'started' do Wait(500) end
-
-    -- The tables are also in sql/qbrobberies.sql. This only saves forgetting to run it.
-    pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_lists` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
-    pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_shells` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
-    pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_stores` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
-    pcall(QB.sql.update, 'CREATE TABLE IF NOT EXISTS `qbrobberies_houses` (`id` varchar(48) NOT NULL, `data` longtext NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4')
+    if not QB.sql.ready(60000) then
+        QB.print.warn('[qbrobberies] kora_sql was unavailable; robbery data is not loaded until restart.')
+        return
+    end
+    for _, spec in ipairs(QBRobberiesSchema) do
+        if spec.seed then spec.seed.once = true end
+    end
+    local reports, schemaErr = QB.sql.ensureTables(QBRobberiesSchema)
+    if schemaErr then
+        QB.print.warn(('[qbrobberies] schema failed: %s'):format(tostring(schemaErr)))
+        return
+    end
+    for _, report in ipairs(reports or {}) do
+        for _, warning in ipairs(report.warnings or {}) do
+            QB.print.warn(('[qbrobberies] %s: %s'):format(tostring(report.table), tostring(warning)))
+        end
+    end
 
     local ok, err = pcall(function()
         -- Lists first: props and setups check that their list exists.

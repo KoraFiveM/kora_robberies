@@ -7,7 +7,7 @@ Staff run `/houseCreator` (needs the ace set in `Config.Creator`, `command` by d
    Each prop has its own target label, progress text, search time, animation (dictionary, clip, flag) and the controls that are blocked while searching. New props start with `defaults.searchTime`, `defaults.searchAnim` and `defaults.searchDisable` (5000 ms, `mp_arresting` / `a_uncuff` / 49, vehicle + movement + combat). Change them when placing, or later with *Search settings* on the prop's card. The server uses the saved values, not what the client sends when a search starts.
 3. **Houses**: pick a shell and aim at each door; keep placing to make many houses in one go. Houses are named for you (`Tier 1 House 1`) and can be renamed. The house uses that shell's saved setup. Each house has its own minimum police, cooldown, security flag and optional hours.
 
-Everything is saved in MySQL (`sql/qbrobberies.sql`, the tables are also created on start).
+Everything is saved in MySQL. The four `qbrobberies_*` tables are created automatically on start by kora_sql (nothing to import). On a first install they are filled with the bundled example lists, shells, houses and stores; existing tables are never re-seeded, so rows you delete stay deleted.
 
 ## Robbing a house
 - Every house door gets a **Break in** target. It needs the break-in item: the shell's default (`defaults.breakItem` in the config unless you set one on the shell), or the house's own. A house with the security system on also needs the security item and sends `TriggerEvent('qbrobberies:houseAlert', { house, label, coords })` on break-in: hook your dispatch to it.
@@ -28,5 +28,5 @@ Build them in `/houseCreator` on the **Stores** page. A store has a name, its ow
 - **Registers:** aim and place as many as you like. A register uses the same settings as a prop (target text, progress text, time, animation, blocked controls) and has its own **sticky note chance**. Robbing one is a progress bar, then the skill check (`qb-minigames`, skipped if it is not running), then cash.
 - **Safes:** aim and place. A sticky note carries the store's safe code, which opens any safe in that store. Without it, **Blow Up Safe** uses a thermite and, when it has burned, **Retrieve Loot** gives the cash.
 - A robbed register or safe stays empty for `resetTime`. Cash amounts, items and the thermite time are in `Config.Robberies.Store.defaults`.
-- Run `sql/qbrobberies.sql` (the stores table is also created on start).
+- The stores table is created automatically on start (first-install example stores are included).
 - The server checks the distance, the police and who is robbing what. Only positions and settings go to players; the chances and the safe code never do.
