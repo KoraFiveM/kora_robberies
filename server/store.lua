@@ -55,6 +55,7 @@ local function releaseRegister(storeId, index)
 end
 
 local function spotFor(src, storeId, kind, index)
+    if not Config.stores.enabled then return nil, 'Store robberies are turned off.' end
     local store = validId(storeId) and Stores[storeId]
     local spot = store and type(index) == 'number' and store[kind][index]
     if not spot then return nil, 'Unknown spot.' end
@@ -82,6 +83,7 @@ QB.callback.register('qbrobberies:stores', function()
     if not DataLoaded then return false end -- not ready yet: the client asks again
 
     local list = {}
+    if not Config.stores.enabled then return list end
     for id, store in pairs(Stores) do
         local registers, states = {}, { registers = {}, safes = {} }
         for index, register in ipairs(store.registers) do
@@ -118,6 +120,7 @@ QB.callback.register('qbrobberies:register:begin', function(src, storeId, index)
 
     register.busyBy, register.started, register.duration = src, GetGameTimer(), spot.time or DefaultSearch.time
     broadcast(storeId, 'registers', index, 'busy')
+    AlertStoreRobbery(storeId, store, spot.coords, 'register')
     return { duration = register.duration, label = spot.progressLabel, anim = spot.anim, disable = spot.disable }
 end)
 
@@ -191,6 +194,7 @@ QB.callback.register('qbrobberies:safe:code', function(src, storeId, index, code
     if not (state.code and tonumber(code) == state.code) then return false, 'Wrong code.' end
     local amount = pay(src, defaults.safeCash)
     if not amount then return false, 'You cannot carry that.' end
+    AlertStoreRobbery(storeId, Stores[storeId], Stores[storeId].safes[index].coords, 'safe')
     emptySafe(storeId, index, safe)
     notify(src, ('You took $%d.'):format(amount), 'success')
     return true
@@ -207,6 +211,7 @@ QB.callback.register('qbrobberies:safe:blow', function(src, storeId, index)
     local time = math.random(defaults.blowTime.min, defaults.blowTime.max)
     safe.blowing = true
     broadcast(storeId, 'safes', index, 'blowing')
+    AlertStoreRobbery(storeId, Stores[storeId], Stores[storeId].safes[index].coords, 'safe')
 
     local state = stateOf(storeId)
     SetTimeout(time, function()

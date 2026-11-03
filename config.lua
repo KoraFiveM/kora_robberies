@@ -151,3 +151,34 @@ Config.Robberies.Store = {
         thermiteItem = 'thermite',
     },
 }
+
+Config.stores = {
+    enabled = true, -- off: registers and safes are hidden and cannot be robbed (houses are not affected)
+}
+
+-- Police alerts through kora_dispatch. Today's test server alerted nobody (F#126).
+Config.alerts = {
+    dispatch = {
+        enabled = true,
+        houseCode = '10-68',     -- radio code on a break-in at a house with its security system on
+        storeCode = '10-90',     -- radio code when a register is robbed or a safe is opened
+        cooldown = 60000,        -- ms between two alerts for the same store, so each register does not page again
+    },
+}
+
+-- Keep the shell spawners (functions) and the creator ace out of the editable settings:
+-- the shell list is code, and the ace decides who can open the creator.
+local shells, creator = Config.Robberies.House.shells, Config.Creator
+Config.Robberies.House.shells, Config.Creator = nil, nil
+if Kora and Kora.config and Kora.config.adopt then
+    Config = Kora.config.adopt(Config, {
+        descriptions = {
+            ['stores.enabled'] = 'Turns store robberies (registers and safes) on or off. Restart the resource to apply.',
+            ['alerts.dispatch.enabled'] = 'Alert police through kora_dispatch when a security house is broken into or a store register or safe is robbed.',
+            ['alerts.dispatch.houseCode'] = 'Radio code shown on the dispatch call for a house break-in.',
+            ['alerts.dispatch.storeCode'] = 'Radio code shown on the dispatch call for a store robbery.',
+            ['alerts.dispatch.cooldown'] = 'Minimum milliseconds between two dispatch alerts for the same store.',
+        },
+    })
+end
+Config.Robberies.House.shells, Config.Creator = shells, creator

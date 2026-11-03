@@ -34,6 +34,7 @@ client_scripts {
 -- Order matters here: each file uses the ones before it.
 server_scripts {
     'server/_functions.lua',
+    'server/alerts.lua',
     'server/rules.lua',
     'server/data.lua',
     'server/creator.lua',
