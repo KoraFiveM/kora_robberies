@@ -2,7 +2,7 @@
 Kora = { sql = { NULL = '\0qbsql:null\0' } }
 dofile('server/schema.lua')
 
-local expected = { qbrobberies_houses = 108, qbrobberies_lists = 11, qbrobberies_shells = 6, qbrobberies_stores = 19 }
+local expected = { kora_robberies_houses = 108, kora_robberies_lists = 11, kora_robberies_shells = 6, kora_robberies_stores = 19 }
 assert(#QBRobberiesSchema == 4, 'four tables declared')
 for _, spec in ipairs(QBRobberiesSchema) do
     assert(expected[spec.name], spec.name .. ' is expected')

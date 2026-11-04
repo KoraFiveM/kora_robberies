@@ -1,6 +1,6 @@
 QBRobberiesSchema = {
     {
-        name = 'qbrobberies_houses',
+        name = 'kora_robberies_houses',
         collate = 'utf8mb4_general_ci',
         columns = {
             { name = 'id', type = 'varchar(48)' },
@@ -120,7 +120,7 @@ QBRobberiesSchema = {
         } },
     },
     {
-        name = 'qbrobberies_lists',
+        name = 'kora_robberies_lists',
         collate = 'utf8mb4_general_ci',
         columns = {
             { name = 'id', type = 'varchar(48)' },
@@ -143,7 +143,7 @@ QBRobberiesSchema = {
         } },
     },
     {
-        name = 'qbrobberies_shells',
+        name = 'kora_robberies_shells',
         collate = 'utf8mb4_general_ci',
         columns = {
             { name = 'id', type = 'varchar(48)' },
@@ -161,7 +161,7 @@ QBRobberiesSchema = {
         } },
     },
     {
-        name = 'qbrobberies_stores',
+        name = 'kora_robberies_stores',
         collate = 'utf8mb4_general_ci',
         columns = {
             { name = 'id', type = 'varchar(48)' },

@@ -98,7 +98,7 @@ function searchItems(query, isAdded)
     return { results = results, total = total }
 end
 
-local tables = { lists = 'qbrobberies_lists', shells = 'qbrobberies_shells', houses = 'qbrobberies_houses', stores = 'qbrobberies_stores' }
+local tables = { lists = 'kora_robberies_lists', shells = 'kora_robberies_shells', houses = 'kora_robberies_houses', stores = 'kora_robberies_stores' }
 function dbSave(kind, id, data)
     local name = tables[kind]
     if not name then return false, 'Unknown table.' end
