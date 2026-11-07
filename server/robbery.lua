@@ -166,8 +166,8 @@ QB.callback.register('qbrobberies:breakin', function(src, houseId)
         if not ok then return false, message end
 
         local needs = requiredItems(house, setup)
-        if defaults.consumeBreakItem then
-            exports['qb-inventory']:RemoveItem(src, needs[1].item, 1)
+        if defaults.consumeBreakItem and not exports['qb-inventory']:RemoveItem(src, needs[1].item, 1) then
+            return false, 'You need: ' .. itemLabel(needs[1].item) .. '.'
         end
 
         session = { players = {}, props = {} }

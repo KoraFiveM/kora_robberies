@@ -16,7 +16,6 @@ dependency 'kora_interior'
 
 shared_scripts {
     '@kora_lib/init.lua',
-    '@kora_sql/init.lua',
     '@kora_core/init.lua',
     'config.lua',
     'shared/constants.lua',
@@ -33,6 +32,7 @@ client_scripts {
 
 -- Order matters here: each file uses the ones before it.
 server_scripts {
+    '@kora_sql/init.lua',
     'server/schema.lua',
     'server/_functions.lua',
     'server/rules.lua',
