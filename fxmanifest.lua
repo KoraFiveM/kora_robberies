@@ -3,8 +3,6 @@ game 'gta5'
 lua54 'yes'
 
 name 'kora_robberies'
--- Keep the legacy resource name resolvable for exports['qbrobberies'] callers.
-provide 'qbrobberies'
 author 'qbcore2'
 version '1.0.0'
 description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
@@ -40,6 +38,8 @@ server_scripts {
     'server/creator.lua',
     'server/robbery.lua',
     'server/store.lua',
+    -- Optional FFT hooks: returns immediately unless fft_kora_hooks is true.
+    'fft_hooks_server.lua',
 }
 
 -- kora_qa: Gherkin test scenarios (converted legacy tests), see [kora]/kora_qa/README.md

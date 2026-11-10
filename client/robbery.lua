@@ -5,7 +5,7 @@ local inside = nil      -- while in a house: { id, house, spawned, objects, exit
 local houseStates = {}  -- house id -> { state = 'open' | 'cooldown', remaining = ms, at = GetGameTimer() }; none = available
 
 local function notify(message, kind)
-    QB.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
 end
 
 local function removeZone(id)
@@ -26,8 +26,8 @@ end
 
 local function leaveHouse()
     if not inside then return end
-    QB.callback.trigger('qbrobberies:leave', inside.id)
-    QB.visuals.fade(inside.house.coords)
+    Kora.callback.trigger('kora_robberies:leave', inside.id)
+    Kora.visuals.fade(inside.house.coords)
     cleanupInside()
 end
 
@@ -36,7 +36,7 @@ local function searchProp(index)
     inside.searching = true
 
     local houseId = inside.id
-    local started, err = QB.callback.trigger('qbrobberies:prop:begin', houseId, index)
+    local started, err = Kora.callback.trigger('kora_robberies:prop:begin', houseId, index)
     if not started then
         if err then notify(err) end
         inside.searching = false
@@ -46,7 +46,7 @@ local function searchProp(index)
     local anim = type(started.anim) == 'table'
         and { dict = started.anim.dict, clip = started.anim.clip, flag = started.anim.flag, flags = started.anim.flag }
         or nil
-    local done = QB.progressbar.start({
+    local done = Kora.progressbar.start({
         label = started.label or DefaultSearch.progressLabel,
         duration = started.duration,
         disable = started.disable or DefaultSearch.disable,
@@ -54,10 +54,10 @@ local function searchProp(index)
     })
 
     if done then
-        local _, finishErr = QB.callback.trigger('qbrobberies:prop:finish', houseId, index)
+        local _, finishErr = Kora.callback.trigger('kora_robberies:prop:finish', houseId, index)
         if finishErr then notify(finishErr) end
     else
-        TriggerServerEvent('qbrobberies:prop:cancel', houseId, index)
+        TriggerServerEvent('kora_robberies:prop:cancel', houseId, index)
     end
     if inside then inside.searching = false end
 end
@@ -88,7 +88,7 @@ local function buildProps(info)
         else
             local object = SpawnProp(prop.model, world, heading)
             if not object then
-                QB.print.warn(('[qbrobberies] prop %d (%s) could not be spawned'):format(index, prop.model))
+                Kora.print.warn(('[kora_robberies] prop %d (%s) could not be spawned'):format(index, prop.model))
             else
                 spawned = spawned + 1
                 inside.objects[#inside.objects + 1] = object
@@ -102,7 +102,7 @@ local function buildProps(info)
     end
 
     if defaults.debug then
-        QB.print.debug(('[qbrobberies] %d props from the server, %d spawned, %d with a search target'):format(#info.props, spawned, targets))
+        Kora.print.debug(('[kora_robberies] %d props from the server, %d spawned, %d with a search target'):format(#info.props, spawned, targets))
     end
     if targets == 0 and #info.props > 0 then
         notify('None of the spots here have an item list, so there is nothing to search. Give them one in the creator.')
@@ -113,13 +113,13 @@ local function enterHouse(id, door, info)
     local house = { coords = door.coords, shell = info.shell, lowerZ = info.lowerZ }
     local def = HouseShellByKey[house.shell]
     if not def then
-        QB.callback.trigger('qbrobberies:leave', id)
+        Kora.callback.trigger('kora_robberies:leave', id)
         return notify('This house uses a shell that is not in the config.')
     end
 
     local spawned, err = SpawnShell(def, HouseSpawnCoords(house))
     if not spawned then
-        QB.callback.trigger('qbrobberies:leave', id)
+        Kora.callback.trigger('kora_robberies:leave', id)
         return notify(err or 'The inside could not be loaded.')
     end
 
@@ -152,7 +152,7 @@ local function minutesLeft(id)
 end
 
 local function enter(id, house)
-    local info, err = QB.callback.trigger('qbrobberies:breakin', id)
+    local info, err = Kora.callback.trigger('kora_robberies:breakin', id)
     if not info then return notify(err or 'You could not get in.') end
     enterHouse(id, house, info)
 end
@@ -160,7 +160,7 @@ end
 local function breakIn(id, house)
     if inside then return end
 
-    local done = QB.progressbar.start({
+    local done = Kora.progressbar.start({
         label = 'Breaking in...',
         duration = defaults.breakTime,
         disable = { move = true, combat = true, car = true },
@@ -196,13 +196,13 @@ local function loadDoors()
 
     local list
     for _ = 1, 20 do
-        list = QB.callback.trigger('qbrobberies:world')
+        list = Kora.callback.trigger('kora_robberies:world')
         if list then break end
         Wait(1500)
     end
     list = list or {}
 
-    if defaults.debug then QB.print.debug(('[qbrobberies] %d house doors'):format(#list)) end
+    if defaults.debug then Kora.print.debug(('[kora_robberies] %d house doors'):format(#list)) end
     for _, house in ipairs(list) do
         local c = house.coords
         if house.state then houseStates[house.id] = { state = house.state, remaining = house.remaining or 0, at = GetGameTimer() } end
@@ -220,23 +220,23 @@ CreateThread(function()
     loadDoors()
 end)
 
-RegisterNetEvent('qbrobberies:client:reload', function()
+RegisterNetEvent('kora_robberies:client:reload', function()
     if source ~= 65535 then return end
     loadDoors()
 end)
 
-RegisterNetEvent('qbrobberies:client:state', function(houseId, state, remaining)
+RegisterNetEvent('kora_robberies:client:state', function(houseId, state, remaining)
     if source ~= 65535 then return end
     houseStates[houseId] = state and { state = state, remaining = remaining or 0, at = GetGameTimer() } or nil
 end)
 
-RegisterNetEvent('qbrobberies:client:closed', function(houseId)
+RegisterNetEvent('kora_robberies:client:closed', function(houseId)
     if source ~= 65535 or not inside or inside.id ~= houseId then return end
     notify('The robbery is over. You have been sent out.')
     leaveHouse()
 end)
 
-RegisterNetEvent('qbrobberies:client:prop', function(houseId, index, state)
+RegisterNetEvent('kora_robberies:client:prop', function(houseId, index, state)
     if source ~= 65535 or not inside or inside.id ~= houseId then return end
     inside.states[index] = state ~= 'free' and state or nil
 end)

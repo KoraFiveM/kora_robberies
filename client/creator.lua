@@ -1,4 +1,4 @@
-local APP_ID = 'qbrobberies:creator'
+local APP_ID = 'kora_robberies:creator'
 
 local data = { lists = {}, setups = {}, houses = {}, stores = {}, items = {} } -- what the server last sent
 local currentView = 'lists'
@@ -16,11 +16,11 @@ local function text(value)
 end
 
 local function toast(message, kind)
-    QB.notify.send({ title = 'House Creator', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = 'House Creator', message = message, type = kind or 'error' })
 end
 
 local function confirmed(title, message)
-    local answer = QB.nui.openAlert({ title = title, message = message, confirmLabel = 'Delete' })
+    local answer = Kora.nui.openAlert({ title = title, message = message, confirmLabel = 'Delete' })
     return answer and answer.confirmed == true
 end
 
@@ -122,7 +122,7 @@ local function searchSummary(search)
 end
 
 local function call(name, ...)
-    local result, err = QB.callback.trigger('qbrobberies:creator:' .. name, ...)
+    local result, err = Kora.callback.trigger('kora_robberies:creator:' .. name, ...)
     if not result then return nil, err or 'Something went wrong.' end
     if result.lists then data = result end
     return result
@@ -169,7 +169,7 @@ local function enterShell(key)
 
     local spawned, err = SpawnShell(HouseShellByKey[key], vector3(origin.x, origin.y, origin.z + lower))
     if not spawned then
-        QB.print.warn(('[qbrobberies] could not enter the %s shell: %s'):format(key, tostring(err)))
+        Kora.print.warn(('[kora_robberies] could not enter the %s shell: %s'):format(key, tostring(err)))
         return toast(err)
     end
 
@@ -203,7 +203,7 @@ end
 
 local function placeProps(tool)
     while editing do
-        local aimed = QB.raycast.getCoords(tool.model and { type = 'object', object = tool.model } or {})
+        local aimed = Kora.raycast.getCoords(tool.model and { type = 'object', object = tool.model } or {})
         local c = aimed and aimed.coords
         if not c then return end
 
@@ -221,7 +221,7 @@ local function placeProps(tool)
 end
 
 local function aim()
-    local aimed = QB.raycast.getCoords({})
+    local aimed = Kora.raycast.getCoords({})
     local c = aimed and aimed.coords
     if not c then return nil end
     return { x = c.x, y = c.y, z = c.z, w = c.w or aimed.heading or 0.0 }
@@ -712,7 +712,7 @@ end
 
 local function refresh(message)
     local navigation = buildNavigation()
-    QB.nui.updateApp(APP_ID, { navigation = navigation })
+    Kora.nui.updateApp(APP_ID, { navigation = navigation })
     return { update = { navigation = navigation }, notice = message }
 end
 
@@ -721,7 +721,7 @@ local function fail(message)
 end
 
 local function askAmount(label, title, current)
-    local result = QB.nui.openInputDialog({
+    local result = Kora.nui.openInputDialog({
         { id = 'amount', label = 'Amount', type = 'number', min = 1, max = Limits.itemAmount, default = current or 1, required = true },
     }, title, label)
     if not result or result.cancelled then return nil end
@@ -908,7 +908,7 @@ local function shellAction(actionId, values)
         local prop = props[index]
         if not prop then return refresh() end
 
-        local result = QB.nui.openInputDialog(searchFields(propSearch(prop)), 'Search settings', prop.label or prop.model or 'Search spot')
+        local result = Kora.nui.openInputDialog(searchFields(propSearch(prop)), 'Search settings', prop.label or prop.model or 'Search spot')
         if not result or result.cancelled then return refresh() end
 
         local search, err = searchFromValues(result.values or {})
@@ -924,7 +924,7 @@ local function shellAction(actionId, values)
         local prop = props[index]
         if not prop then return refresh() end
 
-        local result = QB.nui.openInputDialog({
+        local result = Kora.nui.openInputDialog({
             { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = prop.list or 'none' },
         }, 'Change list', prop.label or prop.model or 'Search spot')
         if not result or result.cancelled then return refresh() end
@@ -1057,7 +1057,7 @@ local function storeAction(actionId, values)
         local register = registers[index]
         if not register then return refresh() end
 
-        local result = QB.nui.openInputDialog(registerFields(register), 'Register settings', register.label or ('Register %d'):format(index))
+        local result = Kora.nui.openInputDialog(registerFields(register), 'Register settings', register.label or ('Register %d'):format(index))
         if not result or result.cancelled then return refresh() end
 
         local edited, err = registerFromValues(result.values or {})
@@ -1092,7 +1092,7 @@ local function onAction(actionId, context)
     return refresh()
 end
 
-QB.nui.registerApp({
+Kora.nui.registerApp({
     id = APP_ID,
     title = 'Robbery Creator',
     icon = 'Home',
@@ -1109,14 +1109,14 @@ local function open()
     if not result then return toast(err or 'Admin permission required.') end
 
     while true do
-        QB.nui.updateApp(APP_ID, { navigation = buildNavigation() })
-        QB.nui.openApp(APP_ID, { viewId = currentView })
+        Kora.nui.updateApp(APP_ID, { navigation = buildNavigation() })
+        Kora.nui.openApp(APP_ID, { viewId = currentView })
         if not pendingTool then break end
         runPendingTool()
     end
 end
 
-RegisterNetEvent('qbrobberies:creator:open', function()
+RegisterNetEvent('kora_robberies:creator:open', function()
     if source ~= 65535 then return end
     CreateThread(open)
 end)

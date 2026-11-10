@@ -1,4 +1,4 @@
-# qbrobberies: house robbery creator
+# kora_robberies: house robbery creator
 
 Staff run `/houseCreator` (needs the ace set in `Config.Creator`, `command` by default).
 
@@ -10,7 +10,7 @@ Staff run `/houseCreator` (needs the ace set in `Config.Creator`, `command` by d
 Everything is saved in MySQL. The four `kora_robberies_*` tables are created automatically on start by kora_sql (nothing to import). On a first install they are filled with the bundled example lists, shells, houses and stores; existing tables are never re-seeded, so rows you delete stay deleted.
 
 ## Robbing a house
-- Every house door gets a **Break in** target. It needs the break-in item: the shell's default (`defaults.breakItem` in the config unless you set one on the shell), or the house's own. A house with the security system on also needs the security item and sends `TriggerEvent('qbrobberies:houseAlert', { house, label, coords })` on break-in: hook your dispatch to it.
+- Every house door gets a **Break in** target. It needs the break-in item: the shell's default (`defaults.breakItem` in the config unless you set one on the shell), or the house's own. A house with the security system on also needs the security item and sends `TriggerEvent('kora_robberies:houseAlert', { house, label, coords })` on break-in: hook your dispatch to it.
 - The server checks the minimum police, the allowed hours and the state, and a house's state is lost when the resource restarts (every house is available again).
 - Every house is in one of three states, the same for every player, and its door target shows it:
   - **Available**: **Break in**. A player needs the items, enough police and the right hours.
@@ -23,7 +23,7 @@ Everything is saved in MySQL. The four `kora_robberies_*` tables are created aut
 Shell keys come from the label in `config.lua` ('Tier 1 House' -> `tier_1_house`). Do not reword a label after saving a setup for it.
 `client/shell.lua` is the only file that knows what a spawned shell looks like.
 
-## Stores (from qbstorerobbery)
+## Stores (from kora_storerobbery)
 Build them in `/houseCreator` on the **Stores** page. A store has a name, its own **minimum police**, **registers** and **safes**.
 - **Registers:** aim and place as many as you like. A register uses the same settings as a prop (target text, progress text, time, animation, blocked controls) and has its own **sticky note chance**. Robbing one is a progress bar, then the skill check (`qb-minigames`, skipped if it is not running), then cash.
 - **Safes:** aim and place. A sticky note carries the store's safe code, which opens any safe in that store. Without it, **Blow Up Safe** uses a thermite and, when it has burned, **Retrieve Loot** gives the cash.

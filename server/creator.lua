@@ -3,7 +3,7 @@ local function fail(message)
 end
 
 local function adminCallback(name, handler)
-    QB.callback.register(name, function(src, ...)
+    Kora.callback.register(name, function(src, ...)
         if not isAdmin(src) then return fail('Admin permission required.') end
         if not DataLoaded then return fail('The data is still loading. Try again in a moment.') end
         return handler(src, ...)
@@ -48,9 +48,9 @@ local function payload()
     return { lists = lists, setups = Setups, houses = houses, stores = stores, items = items }
 end
 
-adminCallback('qbrobberies:creator:get', payload)
+adminCallback('kora_robberies:creator:get', payload)
 
-adminCallback('qbrobberies:creator:lists:create', function(_, label)
+adminCallback('kora_robberies:creator:lists:create', function(_, label)
     label = trim(label, 48)
     if not label then return fail('Enter a name for the list.') end
 
@@ -67,7 +67,7 @@ adminCallback('qbrobberies:creator:lists:create', function(_, label)
     return result
 end)
 
-adminCallback('qbrobberies:creator:lists:items', function(_, id, items)
+adminCallback('kora_robberies:creator:lists:items', function(_, id, items)
     local list = validId(id) and Lists[id]
     if not list then return fail('Unknown list.') end
 
@@ -79,7 +79,7 @@ adminCallback('qbrobberies:creator:lists:items', function(_, id, items)
     return payload()
 end)
 
-adminCallback('qbrobberies:creator:lists:search', function(_, query, id)
+adminCallback('kora_robberies:creator:lists:search', function(_, query, id)
     local list = validId(id) and Lists[id]
     if not list then return fail('Unknown list.') end
 
@@ -88,7 +88,7 @@ adminCallback('qbrobberies:creator:lists:search', function(_, query, id)
     return searchItems(query, function(name) return inList[name] == true end)
 end)
 
-adminCallback('qbrobberies:creator:lists:delete', function(_, id)
+adminCallback('kora_robberies:creator:lists:delete', function(_, id)
     if not (validId(id) and Lists[id]) then return fail('Unknown list.') end
     local ok, err = DeleteList(id)
     if not ok then return fail(err or 'Failed to delete the list.') end
@@ -107,7 +107,7 @@ local function updateSetup(key, change)
     return payload()
 end
 
-adminCallback('qbrobberies:creator:shells:exit', function(_, key, offset)
+adminCallback('kora_robberies:creator:shells:exit', function(_, key, offset)
     return updateSetup(key, function(setup)
         local clean, err = cleanExit(offset)
         if not clean then return err end
@@ -115,7 +115,7 @@ adminCallback('qbrobberies:creator:shells:exit', function(_, key, offset)
     end)
 end)
 
-adminCallback('qbrobberies:creator:shells:props', function(_, key, props)
+adminCallback('kora_robberies:creator:shells:props', function(_, key, props)
     return updateSetup(key, function(setup)
         local clean, err = cleanProps(props)
         if not clean then return err end
@@ -123,7 +123,7 @@ adminCallback('qbrobberies:creator:shells:props', function(_, key, props)
     end)
 end)
 
-adminCallback('qbrobberies:creator:shells:breakItem', function(_, key, item)
+adminCallback('kora_robberies:creator:shells:breakItem', function(_, key, item)
     return updateSetup(key, function(setup)
         local clean, err = cleanBreakItem(item)
         if err then return err end
@@ -131,7 +131,7 @@ adminCallback('qbrobberies:creator:shells:breakItem', function(_, key, item)
     end)
 end)
 
-adminCallback('qbrobberies:creator:shells:clear', function(_, key)
+adminCallback('kora_robberies:creator:shells:clear', function(_, key)
     if not (HouseShellByKey[key] and Setups[key]) then return fail('That shell has no setup.') end
     local ok, err = DeleteSetup(key)
     if not ok then return fail(err or 'Failed to clear the setup.') end
@@ -158,7 +158,7 @@ local function defaultHouseLabel(shellKey)
     return ('%s %d'):format(HouseShellByKey[shellKey].label, count):sub(1, 48)
 end
 
-adminCallback('qbrobberies:creator:houses:create', function(_, shellKey, coords, label)
+adminCallback('kora_robberies:creator:houses:create', function(_, shellKey, coords, label)
     if not HouseShellByKey[shellKey] then return fail('Pick a shell.') end
     local entrance, err = cleanEntrance(coords)
     if not entrance then return fail(err) end
@@ -173,13 +173,13 @@ adminCallback('qbrobberies:creator:houses:create', function(_, shellKey, coords,
     return result
 end)
 
-adminCallback('qbrobberies:creator:houses:details', function(_, id, input)
+adminCallback('kora_robberies:creator:houses:details', function(_, id, input)
     return updateHouse(id, function(house)
         return cleanHouseDetails(input, house)
     end)
 end)
 
-adminCallback('qbrobberies:creator:houses:coords', function(_, id, coords)
+adminCallback('kora_robberies:creator:houses:coords', function(_, id, coords)
     return updateHouse(id, function(house)
         local entrance, err = cleanEntrance(coords)
         if not entrance then return nil, err end
@@ -188,7 +188,7 @@ adminCallback('qbrobberies:creator:houses:coords', function(_, id, coords)
     end)
 end)
 
-adminCallback('qbrobberies:creator:houses:delete', function(_, id)
+adminCallback('kora_robberies:creator:houses:delete', function(_, id)
     if not (validId(id) and Houses[id]) then return fail('Unknown house.') end
     local ok, err = DeleteHouse(id)
     if not ok then return fail(err or 'Failed to delete the house.') end
@@ -207,7 +207,7 @@ local function updateStore(id, change)
     return payload()
 end
 
-adminCallback('qbrobberies:creator:stores:create', function(_, label)
+adminCallback('kora_robberies:creator:stores:create', function(_, label)
     label = trim(label, 48)
     if not label then return fail('Enter a name for the store.') end
 
@@ -220,13 +220,13 @@ adminCallback('qbrobberies:creator:stores:create', function(_, label)
     return result
 end)
 
-adminCallback('qbrobberies:creator:stores:details', function(_, id, input)
+adminCallback('kora_robberies:creator:stores:details', function(_, id, input)
     return updateStore(id, function(store)
         return cleanStoreDetails(input, store)
     end)
 end)
 
-adminCallback('qbrobberies:creator:stores:registers', function(_, id, list)
+adminCallback('kora_robberies:creator:stores:registers', function(_, id, list)
     return updateStore(id, function(store)
         local clean, err = cleanRegisters(list)
         if not clean then return nil, err end
@@ -235,7 +235,7 @@ adminCallback('qbrobberies:creator:stores:registers', function(_, id, list)
     end)
 end)
 
-adminCallback('qbrobberies:creator:stores:safes', function(_, id, list)
+adminCallback('kora_robberies:creator:stores:safes', function(_, id, list)
     return updateStore(id, function(store)
         local clean, err = cleanSafes(list)
         if not clean then return nil, err end
@@ -244,25 +244,25 @@ adminCallback('qbrobberies:creator:stores:safes', function(_, id, list)
     end)
 end)
 
-adminCallback('qbrobberies:creator:stores:delete', function(_, id)
+adminCallback('kora_robberies:creator:stores:delete', function(_, id)
     if not (validId(id) and Stores[id]) then return fail('Unknown store.') end
     local ok, err = DeleteStore(id)
     if not ok then return fail(err or 'Failed to delete the store.') end
     return payload()
 end)
 
-QB.commands.add(Config.Creator.command, 'Open the robbery creator', nil, false, function(source)
-    TriggerClientEvent('qbrobberies:creator:open', source)
+Kora.commands.add(Config.Creator.command, 'Open the robbery creator', nil, false, function(source)
+    TriggerClientEvent('kora_robberies:creator:open', source)
 end, {
     checkPermission = function(source)
         return isAdmin(source)
     end,
     notify = function(source, message, type_)
         if source == 0 then
-            print(('[qbrobberies] %s'):format(message))
+            print(('[kora_robberies] %s'):format(message))
             return
         end
-        QB.notify.send(source, { title = 'House Creator', message = message, type = type_ })
+        Kora.notify.send(source, { title = 'House Creator', message = message, type = type_ })
     end,
     resource = GetCurrentResourceName(),
 })

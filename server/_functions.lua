@@ -71,7 +71,7 @@ end
 function itemEntry(shared, name)
     local info = shared[name]
     if type(info) ~= 'table' then return nil end
-    local image = type(info.image) == 'string' and info.image ~= '' and ('nui://qbinventory/images/' .. info.image) or nil
+    local image = type(info.image) == 'string' and info.image ~= '' and ('nui://kora_inventory/images/' .. info.image) or nil
     return { label = tostring(info.label or name), image = image }
 end
 
@@ -103,28 +103,28 @@ function dbSave(kind, id, data)
     local name = tables[kind]
     if not name then return false, 'Unknown table.' end
 
-    local rows = QB.sql.query(('SELECT `id` FROM `%s` WHERE `id` = ? LIMIT 1'):format(name), { id })
+    local rows = Kora.sql.query(('SELECT `id` FROM `%s` WHERE `id` = ? LIMIT 1'):format(name), { id })
     if rows and rows[1] then
-        return QB.sql.update(('UPDATE `%s` SET `data` = ? WHERE `id` = ?'):format(name), { json.encode(data), id })
+        return Kora.sql.update(('UPDATE `%s` SET `data` = ? WHERE `id` = ?'):format(name), { json.encode(data), id })
     end
-    return QB.sql.update(('INSERT INTO `%s` (`id`, `data`) VALUES (?, ?)'):format(name), { id, json.encode(data) })
+    return Kora.sql.update(('INSERT INTO `%s` (`id`, `data`) VALUES (?, ?)'):format(name), { id, json.encode(data) })
 end
 
 function dbDelete(kind, id)
     local name = tables[kind]
     if not name then return false, 'Unknown table.' end
-    return QB.sql.update(('DELETE FROM `%s` WHERE `id` = ?'):format(name), { id })
+    return Kora.sql.update(('DELETE FROM `%s` WHERE `id` = ?'):format(name), { id })
 end
 
 function dbRows(kind)
-    return QB.sql.query(('SELECT * FROM `%s`'):format(tables[kind])) or {}
+    return Kora.sql.query(('SELECT * FROM `%s`'):format(tables[kind])) or {}
 end
 
 function isNear(src, coords, radius)
     if not coords then return false end
     local x, y, z = tonumber(coords.x), tonumber(coords.y), tonumber(coords.z)
     if not (x and y and z) then return false end
-    return QB.distance.player(src, vec3(x, y, z), radius or 5.0)
+    return Kora.distance.player(src, vec3(x, y, z), radius or 5.0)
 end
 
 local cooldowns = {}
@@ -151,7 +151,7 @@ function playerJob(src)
     if type(job) ~= 'table' then
         if not warned then
             warned = true
-            QB.print.warn('[qbrobberies] could not read a player\'s job, so no police are counted. Fix playerJob() in server/_functions.lua.')
+            Kora.print.warn('[kora_robberies] could not read a player\'s job, so no police are counted. Fix playerJob() in server/_functions.lua.')
         end
         return nil, false
     end

@@ -5,7 +5,7 @@ local states = {}      -- store id -> { registers = { [i] = 'busy' | 'robbed' },
 local working = false  -- this player is in the middle of something
 
 local function notify(message, kind)
-    QB.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
 end
 
 local function stateOf(storeId, kind, index)
@@ -13,7 +13,7 @@ local function stateOf(storeId, kind, index)
 end
 
 local function progress(label, duration, anim, disable)
-    return QB.progressbar.start({
+    return Kora.progressbar.start({
         label = label,
         duration = duration,
         useWhileDead = false,
@@ -28,11 +28,11 @@ local function busyWith(fn)
     working = true
     local ok, err = pcall(fn)
     working = false
-    if not ok then QB.print.warn(('[qbrobberies] %s'):format(tostring(err))) end
+    if not ok then Kora.print.warn(('[kora_robberies] %s'):format(tostring(err))) end
 end
 
 local function robRegister(storeId, index)
-    local started, err = QB.callback.trigger('qbrobberies:register:begin', storeId, index)
+    local started, err = Kora.callback.trigger('kora_robberies:register:begin', storeId, index)
     if not started then
         if err then notify(err) end
         return
@@ -45,32 +45,32 @@ local function robRegister(storeId, index)
         done = not ok or passed
     end
     if not done then
-        TriggerServerEvent('qbrobberies:register:cancel', storeId, index)
+        TriggerServerEvent('kora_robberies:register:cancel', storeId, index)
         return
     end
 
-    local _, finishErr = QB.callback.trigger('qbrobberies:register:finish', storeId, index)
+    local _, finishErr = Kora.callback.trigger('kora_robberies:register:finish', storeId, index)
     if finishErr then notify(finishErr) end
 end
 
 local function enterCode(storeId, index)
-    local input = QB.nui.openInputDialog({
+    local input = Kora.nui.openInputDialog({
         { id = 'code', label = 'Code', type = 'number', required = true },
     }, 'Enter Safe Code')
     if not (input and input.values and tonumber(input.values.code)) then return end
 
-    local _, err = QB.callback.trigger('qbrobberies:safe:code', storeId, index, tonumber(input.values.code))
+    local _, err = Kora.callback.trigger('kora_robberies:safe:code', storeId, index, tonumber(input.values.code))
     if err then notify(err) end
 end
 
 local function blowSafe(storeId, index, coords)
-    local time, err = QB.callback.trigger('qbrobberies:safe:blow', storeId, index)
+    local time, err = Kora.callback.trigger('kora_robberies:safe:blow', storeId, index)
     if not time then
         if err then notify(err) end
         return
     end
 
-    local object = QB.entities.create('hei_prop_heist_thermite', vector3(coords.x, coords.y, coords.z), { freeze = true, invincible = true })
+    local object = Kora.entities.create('hei_prop_heist_thermite', vector3(coords.x, coords.y, coords.z), { freeze = true, invincible = true })
     Wait(time)
     AddExplosion(coords.x, coords.y, coords.z, 2, 1.0, true, false, 1.0)
     if object then DeleteEntity(object) end
@@ -78,7 +78,7 @@ end
 
 local function takeLoot(storeId, index)
     if not progress('Retrieving Loot...', 5000) then return end
-    local _, err = QB.callback.trigger('qbrobberies:safe:loot', storeId, index)
+    local _, err = Kora.callback.trigger('kora_robberies:safe:loot', storeId, index)
     if err then notify(err) end
 end
 
@@ -99,7 +99,7 @@ local function loadStores()
     clearZones()
     local list
     for _ = 1, 20 do
-        list = QB.callback.trigger('qbrobberies:stores')
+        list = Kora.callback.trigger('kora_robberies:stores')
         if list then break end
         Wait(1500)
     end
@@ -153,13 +153,13 @@ CreateThread(function()
 end)
 
 -- A store was added, changed or deleted in the creator.
-RegisterNetEvent('qbrobberies:client:reloadStores', function()
+RegisterNetEvent('kora_robberies:client:reloadStores', function()
     if source ~= 65535 then return end
     loadStores()
 end)
 
 -- A register or safe changed state. 'free' means it is available again.
-RegisterNetEvent('qbrobberies:client:store', function(storeId, kind, index, name)
+RegisterNetEvent('kora_robberies:client:store', function(storeId, kind, index, name)
     if source ~= 65535 or not states[storeId] then return end
     states[storeId][kind][index] = name ~= 'free' and name or nil
 end)

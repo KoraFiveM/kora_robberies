@@ -28,7 +28,7 @@ function SaveHouse(id, house)
     local ok, err = dbSave('houses', id, house)
     if not ok then return false, err end
     Houses[id] = house
-    TriggerClientEvent('qbrobberies:client:reload', -1) -- players re-read where the houses are
+    TriggerClientEvent('kora_robberies:client:reload', -1) -- players re-read where the houses are
     return true
 end
 
@@ -37,7 +37,7 @@ function SaveStore(id, store)
     if not ok then return false, err end
     Stores[id] = store
     ResetStoreState(id) -- the registers and safes may have moved
-    TriggerClientEvent('qbrobberies:client:reloadStores', -1)
+    TriggerClientEvent('kora_robberies:client:reloadStores', -1)
     return true
 end
 
@@ -46,7 +46,7 @@ function DeleteStore(id)
     if not ok then return false, err end
     Stores[id] = nil
     ResetStoreState(id)
-    TriggerClientEvent('qbrobberies:client:reloadStores', -1)
+    TriggerClientEvent('kora_robberies:client:reloadStores', -1)
     return true
 end
 
@@ -61,7 +61,7 @@ function DeleteHouse(id)
     local ok, err = dbDelete('houses', id)
     if not ok then return false, err end
     Houses[id] = nil
-    TriggerClientEvent('qbrobberies:client:reload', -1)
+    TriggerClientEvent('kora_robberies:client:reload', -1)
     return true
 end
 
@@ -83,21 +83,21 @@ end
 
 CreateThread(function()
     Wait(1000)
-    if not QB.sql.ready(60000) then
-        QB.print.warn('[qbrobberies] kora_sql was unavailable; robbery data is not loaded until restart.')
+    if not Kora.sql.ready(60000) then
+        Kora.print.warn('[kora_robberies] kora_sql was unavailable; robbery data is not loaded until restart.')
         return
     end
-    for _, spec in ipairs(QBRobberiesSchema) do
+    for _, spec in ipairs(KoraRobberiesSchema) do
         if spec.seed then spec.seed.once = true end
     end
-    local reports, schemaErr = QB.sql.ensureTables(QBRobberiesSchema)
+    local reports, schemaErr = Kora.sql.ensureTables(KoraRobberiesSchema)
     if schemaErr then
-        QB.print.warn(('[qbrobberies] schema failed: %s'):format(tostring(schemaErr)))
+        Kora.print.warn(('[kora_robberies] schema failed: %s'):format(tostring(schemaErr)))
         return
     end
     for _, report in ipairs(reports or {}) do
         for _, warning in ipairs(report.warnings or {}) do
-            QB.print.warn(('[qbrobberies] %s: %s'):format(tostring(report.table), tostring(warning)))
+            Kora.print.warn(('[kora_robberies] %s: %s'):format(tostring(report.table), tostring(warning)))
         end
     end
 
@@ -119,7 +119,7 @@ CreateThread(function()
         end
     end)
     if not ok then
-        QB.print.warn(('[qbrobberies] could not read the database: %s'):format(tostring(err)))
+        Kora.print.warn(('[kora_robberies] could not read the database: %s'):format(tostring(err)))
         return
     end
 
@@ -129,7 +129,7 @@ CreateThread(function()
     for id, house in pairs(Houses) do
         local setup = Setups[house.shell]
         if not (setup and setup.exit) then
-            QB.print.warn(('[qbrobberies] house "%s" uses the shell "%s", which has no exit set yet. Players cannot get in until you set it in /%s.'):format(id, house.shell, Config.Creator.command))
+            Kora.print.warn(('[kora_robberies] house "%s" uses the shell "%s", which has no exit set yet. Players cannot get in until you set it in /%s.'):format(id, house.shell, Config.Creator.command))
         end
     end
 end)

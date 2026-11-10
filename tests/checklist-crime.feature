@@ -9,7 +9,7 @@ Feature: kora_robberies — Crime
     """
     Given my job is "unemployed"
     When I run the command "/robberyCreator"
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     And I confirm: a non-admin player is refused and the creator does not open
 
   @kora_robberies @checklist @checklist:kora_robberies:creator-item-lists @cat:crime @needs:admin
@@ -18,7 +18,7 @@ Feature: kora_robberies — Crime
     Checklist test: Creator > Item lists: make a list, search/add items, edit amounts, remove items, delete the list.
     """
     When I manually: open the robbery creator with the staff creator command and go to Item lists
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     When I manually: create a new item list
     And I manually: search for an item and add it to the list
     And I manually: edit the amount of an item in the list
@@ -32,7 +32,7 @@ Feature: kora_robberies — Crime
     Checklist test: Creator > Shells: enter a shell, set the exit by aiming, place props/box targets with an item list, edit search settings, delete.
     """
     When I manually: open the robbery creator with the staff creator command and go to Shells
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     When I manually: enter a shell and aim where the exit goes to set the exit
     And I manually: place a prop with an item list
     And I manually: place a box target (leave the prop model empty) with an item list
@@ -47,7 +47,7 @@ Feature: kora_robberies — Crime
     Checklist test: Creator > Shells > Break-in item: change item required, then verify houses using that shell need it.
     """
     When I manually: open the robbery creator with the staff creator command, go to Shells and open Break-in item
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     When I manually: change the required break-in item for a shell
     And I manually: go to a house that uses that shell and try to break in without the new item
     Then I confirm: the break-in is refused without the new item
@@ -60,7 +60,7 @@ Feature: kora_robberies — Crime
     Checklist test: Creator > Houses: pick shell, aim at doors to place houses, rename, set min police, cooldown, security flag and hours.
     """
     When I manually: open the robbery creator with the staff creator command and go to Houses
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     When I manually: pick a shell and aim at doors to place houses
     And I manually: rename a house
     And I manually: set its minimum police, cooldown, security flag and hours
@@ -72,7 +72,7 @@ Feature: kora_robberies — Crime
     Checklist test: Creator > Stores: create store, set name/min police, place registers (sticky note chance) and safes by aiming.
     """
     When I manually: open the robbery creator with the staff creator command and go to Stores
-    Then the "qbrobberies:creator" app should be open
+    Then the "kora_robberies:creator" app should be open
     When I manually: create a store and set its name and minimum police
     And I manually: place a register by aiming and set its sticky note chance
     And I manually: place a safe by aiming
@@ -94,7 +94,7 @@ Feature: kora_robberies — Crime
   @kora_robberies @checklist @checklist:kora_robberies:house-security @cat:crime
   Scenario: Security-system house needs extra item
     """
-    Checklist test: On a security house, break-in also needs electronickit and fires qbrobberies:houseAlert (dispatch hook).
+    Checklist test: On a security house, break-in also needs electronickit and fires kora_robberies:houseAlert (dispatch hook).
     """
     Given I have 1 "lockpick"
     When I manually: go to a house with the security system on and try to break in with only the lockpick

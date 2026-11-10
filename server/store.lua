@@ -2,7 +2,7 @@ local defaults = Config.Robberies.Store.defaults
 local State = {}
 
 local function notify(src, message, kind)
-    QB.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
 end
 
 local function stateOf(storeId)
@@ -21,7 +21,7 @@ function ResetStoreState(storeId)
 end
 
 local function broadcast(storeId, kind, index, name)
-    TriggerClientEvent('qbrobberies:client:store', -1, storeId, kind, index, name)
+    TriggerClientEvent('kora_robberies:client:store', -1, storeId, kind, index, name)
 end
 
 local function later(storeId, fn)
@@ -78,7 +78,7 @@ local function stickyCode(storeId)
     return state.code
 end
 
-QB.callback.register('qbrobberies:stores', function()
+Kora.callback.register('kora_robberies:stores', function()
     if not DataLoaded then return false end -- not ready yet: the client asks again
 
     local list = {}
@@ -101,7 +101,7 @@ QB.callback.register('qbrobberies:stores', function()
     return list
 end)
 
-QB.callback.register('qbrobberies:register:begin', function(src, storeId, index)
+Kora.callback.register('kora_robberies:register:begin', function(src, storeId, index)
     if onCooldown(src, 'register') then return false, 'Slow down.' end
     startCooldown(src, 'register', 500)
 
@@ -121,14 +121,14 @@ QB.callback.register('qbrobberies:register:begin', function(src, storeId, index)
     return { duration = register.duration, label = spot.progressLabel, anim = spot.anim, disable = spot.disable }
 end)
 
-QB.callback.register('qbrobberies:register:finish', function(src, storeId, index)
+Kora.callback.register('kora_robberies:register:finish', function(src, storeId, index)
     local store, spot = spotFor(src, storeId, 'registers', index)
     if not store then return false, spot end
 
     local register = spotState(storeId, 'registers', index)
     if not (register.busyBy == src and not register.robbed) then return false, 'You are not robbing that.' end
     if GetGameTimer() - register.started < register.duration - 1000 then
-        QB.print.warn(('[qbrobberies] player %s finished a register too fast'):format(src))
+        Kora.print.warn(('[kora_robberies] player %s finished a register too fast'):format(src))
         releaseRegister(storeId, index)
         return false, 'Too fast.'
     end
@@ -154,7 +154,7 @@ QB.callback.register('qbrobberies:register:finish', function(src, storeId, index
     return true
 end)
 
-RegisterNetEvent('qbrobberies:register:cancel', function(storeId, index)
+RegisterNetEvent('kora_robberies:register:cancel', function(storeId, index)
     local src = source
     local store = validId(storeId) and Stores[storeId]
     if not (store and type(index) == 'number' and store.registers[index]) then return end
@@ -181,7 +181,7 @@ local function emptySafe(storeId, index, safe)
     end)
 end
 
-QB.callback.register('qbrobberies:safe:code', function(src, storeId, index, code)
+Kora.callback.register('kora_robberies:safe:code', function(src, storeId, index, code)
     if onCooldown(src, 'safe') then return false, 'Slow down.' end
     startCooldown(src, 'safe', 1000)
 
@@ -196,7 +196,7 @@ QB.callback.register('qbrobberies:safe:code', function(src, storeId, index, code
     return true
 end)
 
-QB.callback.register('qbrobberies:safe:blow', function(src, storeId, index)
+Kora.callback.register('kora_robberies:safe:blow', function(src, storeId, index)
     if onCooldown(src, 'safe') then return false, 'Slow down.' end
     startCooldown(src, 'safe', 1000)
 
@@ -223,7 +223,7 @@ QB.callback.register('qbrobberies:safe:blow', function(src, storeId, index)
     return time
 end)
 
-QB.callback.register('qbrobberies:safe:loot', function(src, storeId, index)
+Kora.callback.register('kora_robberies:safe:loot', function(src, storeId, index)
     if onCooldown(src, 'safe') then return false, 'Slow down.' end
     startCooldown(src, 'safe', 1000)
 

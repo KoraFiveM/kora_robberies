@@ -17,7 +17,7 @@ function SpawnShell(def, coords)
     local handle = ids
     while type(handle) == 'table' do handle = handle[1] end
     if type(handle) ~= 'number' then
-        QB.print.warn(('[qbrobberies] %s returned no shell handle: %s'):format(tostring(def.label), json.encode(ids)))
+        Kora.print.warn(('[kora_robberies] %s returned no shell handle: %s'):format(tostring(def.label), json.encode(ids)))
         return nil, 'The shell did not spawn.'
     end
 
@@ -35,10 +35,10 @@ function SpawnShell(def, coords)
             waited = waited + 100
         end
         if #(GetEntityCoords(shell) - coords) > 100.0 then
-            QB.print.warn(('[qbrobberies] the shell is %.0f units from where it was spawned; props will be placed wrong. Check client/shell.lua.'):format(#(GetEntityCoords(shell) - coords)))
+            Kora.print.warn(('[kora_robberies] the shell is %.0f units from where it was spawned; props will be placed wrong. Check client/shell.lua.'):format(#(GetEntityCoords(shell) - coords)))
         end
     else
-        QB.print.warn(('[qbrobberies] %s: handle %s is not an entity on this client, so the spawn coordinates are used as the shell origin.'):format(
+        Kora.print.warn(('[kora_robberies] %s: handle %s is not an entity on this client, so the spawn coordinates are used as the shell origin.'):format(
             tostring(def.label), tostring(handle)))
     end
 
@@ -52,7 +52,7 @@ function SpawnShell(def, coords)
 end
 
 function SpawnProp(model, world, heading)
-    local ok, entity = pcall(QB.entities.create, model, vector4(world.x, world.y, world.z, heading), { freeze = true, invincible = true })
+    local ok, entity = pcall(Kora.entities.create, model, vector4(world.x, world.y, world.z, heading), { freeze = true, invincible = true })
     if not (ok and type(entity) == 'number' and DoesEntityExist(entity)) then
         local hash = joaat(model)
         if not IsModelInCdimage(hash) then return nil end

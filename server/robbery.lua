@@ -4,7 +4,7 @@ local defaults = Config.Robberies.House.defaults
 local robberyTime = math.floor((defaults.robberyTime or (1000 * 60) * 15) / 1000) -- seconds
 
 local function notify(src, message, kind)
-    QB.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
 end
 
 local function itemLabel(name)
@@ -16,7 +16,7 @@ local function broadcast(houseId, index, state)
     local session = Sessions[houseId]
     if not session then return end
     for src in pairs(session.players) do
-        TriggerClientEvent('qbrobberies:client:prop', src, houseId, index, state)
+        TriggerClientEvent('kora_robberies:client:prop', src, houseId, index, state)
     end
 end
 
@@ -50,7 +50,7 @@ end)
 
 local function setState(houseId, state, seconds)
     States[houseId] = state and { state = state, endsAt = os.time() + seconds } or nil
-    TriggerClientEvent('qbrobberies:client:state', -1, houseId, state, state and seconds * 1000 or nil)
+    TriggerClientEvent('kora_robberies:client:state', -1, houseId, state, state and seconds * 1000 or nil)
 end
 
 local function remainingSeconds(houseId)
@@ -62,7 +62,7 @@ local function closeHouse(houseId)
     local session = Sessions[houseId]
     Sessions[houseId] = nil
     for src in pairs(session and session.players or {}) do
-        TriggerClientEvent('qbrobberies:client:closed', src, houseId)
+        TriggerClientEvent('kora_robberies:client:closed', src, houseId)
     end
 
     local house = Houses[houseId]
@@ -128,7 +128,7 @@ local function entryInfo(houseId, house, setup)
     return { shell = house.shell, lowerZ = house.lowerZ, exit = setup.exit, props = props, states = states }
 end
 
-QB.callback.register('qbrobberies:world', function()
+Kora.callback.register('kora_robberies:world', function()
     if not DataLoaded then return false end -- not ready yet: the client asks again
 
     local list = {}
@@ -142,7 +142,7 @@ QB.callback.register('qbrobberies:world', function()
     return list
 end)
 
-QB.callback.register('qbrobberies:breakin', function(src, houseId)
+Kora.callback.register('kora_robberies:breakin', function(src, houseId)
     if onCooldown(src, 'breakin') then return false, 'Slow down.' end
     startCooldown(src, 'breakin', 2000)
 
@@ -175,7 +175,7 @@ QB.callback.register('qbrobberies:breakin', function(src, houseId)
         setState(houseId, 'open', robberyTime)
 
         if house.security then
-            TriggerEvent('qbrobberies:houseAlert', { house = houseId, label = house.label, coords = house.coords })
+            TriggerEvent('kora_robberies:houseAlert', { house = houseId, label = house.label, coords = house.coords })
         end
     end
 
@@ -185,7 +185,7 @@ QB.callback.register('qbrobberies:breakin', function(src, houseId)
     return entryInfo(houseId, house, setup)
 end)
 
-QB.callback.register('qbrobberies:leave', function(src, houseId)
+Kora.callback.register('kora_robberies:leave', function(src, houseId)
     if not validId(houseId) then return false end
     leaveSession(src, houseId)
     return true
@@ -205,7 +205,7 @@ local function searchable(src, houseId, index)
     return session, list, prop
 end
 
-QB.callback.register('qbrobberies:prop:begin', function(src, houseId, index)
+Kora.callback.register('kora_robberies:prop:begin', function(src, houseId, index)
     if onCooldown(src, 'search') then return false, 'Slow down.' end
     startCooldown(src, 'search', 500)
 
@@ -226,14 +226,14 @@ QB.callback.register('qbrobberies:prop:begin', function(src, houseId, index)
     return { duration = state.duration, label = prop.progressLabel, anim = prop.anim, disable = prop.disable }
 end)
 
-QB.callback.register('qbrobberies:prop:finish', function(src, houseId, index)
+Kora.callback.register('kora_robberies:prop:finish', function(src, houseId, index)
     local session, list = searchable(src, houseId, index)
     if not session then return false, list end
 
     local state = session.props[index]
     if not (state and state.busyBy == src and not state.looted) then return false, 'You are not searching that.' end
     if GetGameTimer() - state.started < state.duration - 1000 then
-        QB.print.warn(('[qbrobberies] player %s finished a search too fast'):format(src))
+        Kora.print.warn(('[kora_robberies] player %s finished a search too fast'):format(src))
         releaseProp(houseId, index)
         return false, 'Too fast.'
     end
@@ -251,9 +251,12 @@ QB.callback.register('qbrobberies:prop:finish', function(src, houseId, index)
     return true
 end)
 
-RegisterNetEvent('qbrobberies:prop:cancel', function(houseId, index)
+RegisterNetEvent('kora_robberies:prop:cancel', function(houseId, index)
     local src = source
     local session = validId(houseId) and Sessions[houseId]
     local state = session and type(index) == 'number' and session.props[index]
     if state and state.busyBy == src then releaseProp(houseId, index) end
 end)
+
+-- FFT seam: used only by fft_hooks_server.lua (inert unless fft_kora_hooks is true).
+RobberyFFT = { States = States, Sessions = Sessions, setState = setState }

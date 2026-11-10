@@ -1,4 +1,4 @@
-QBRobberiesSchema = {
+KoraRobberiesSchema = {
     {
         name = 'kora_robberies_houses',
         collate = 'utf8mb4_general_ci',
