@@ -1,0 +1,57 @@
+{
+  "resource": "kora_robberies",
+  "standardsRevision": "2026-11-12.2",
+  "realms": {
+    "client": [
+      "client/creator.lua",
+      "client/main.lua",
+      "client/robbery.lua",
+      "client/shell.lua",
+      "client/store.lua"
+    ],
+    "server": [
+      "fft_hooks_server.lua",
+      "server/_functions.lua",
+      "server/creator.lua",
+      "server/data.lua",
+      "server/robbery.lua",
+      "server/rules.lua",
+      "server/schema.lua",
+      "server/store.lua"
+    ],
+    "shared": [
+      "config.lua",
+      "shared/constants.lua",
+      "shared/shells.lua"
+    ],
+    "manifest": [
+      "fxmanifest.lua"
+    ],
+    "test": [
+      "test/schema.lua"
+    ]
+  },
+  "exclude": [
+    ".git/*",
+    ".github/*",
+    ".standards/*",
+    "node_modules/*",
+    "**/node_modules/*",
+    "vendor/*",
+    "**/vendor/*",
+    "web/*",
+    "ui/*",
+    "html/*",
+    "dist/*",
+    "artifacts/*",
+    "runtime/*",
+    "txData/*",
+    "storage/*",
+    "stream/*",
+    "docs/*",
+    "__pycache__/*",
+    "modules/lookup/data/*"
+  ],
+  "project": "Kora Framework",
+  "copyright": "Copyright © 2026 Kora Framework"
+}
