@@ -1,6 +1,6 @@
 ---
 title: House robberies
-sidebar_position: 4
+sidebar_position: 7
 ---
 
 # House robberies
