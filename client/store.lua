@@ -5,7 +5,7 @@ local states = {}      -- store id -> { registers = { [i] = 'busy' | 'robbed' },
 local working = false  -- this player is in the middle of something
 
 local function notify(message, kind)
-    Kora.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = Kora.lang('robbery'), message = message, type = kind or 'error' })
 end
 
 local function stateOf(storeId, kind, index)
@@ -55,8 +55,8 @@ end
 
 local function enterCode(storeId, index)
     local input = Kora.nui.openInputDialog({
-        { id = 'code', label = 'Code', type = 'number', required = true },
-    }, 'Enter Safe Code')
+        { id = 'code', label = Kora.lang('code'), type = 'number', required = true },
+    }, Kora.lang('enter_safe_code'))
     if not (input and input.values and tonumber(input.values.code)) then return end
 
     local _, err = Kora.callback.trigger('kora_robberies:safe:code', storeId, index, tonumber(input.values.code))
@@ -77,7 +77,7 @@ local function blowSafe(storeId, index, coords)
 end
 
 local function takeLoot(storeId, index)
-    if not progress('Retrieving Loot...', 5000) then return end
+    if not progress(Kora.lang('retrieving_loot'), 5000) then return end
     local _, err = Kora.callback.trigger('kora_robberies:safe:loot', storeId, index)
     if err then notify(err) end
 end
@@ -113,7 +113,7 @@ local function loadStores()
         for index, register in ipairs(store.registers) do
             addZone(register.coords, { {
                 icon = 'fas fa-cash-register',
-                label = register.label or 'Rob Register',
+                label = register.label or Kora.lang('rob_register'),
                 onSelect = function() busyWith(function() robRegister(storeId, index) end) end,
                 canInteract = function() return not working and not stateOf(storeId, 'registers', index) end,
             } })
@@ -124,13 +124,13 @@ local function loadStores()
             addZone(coords, {
                 {
                     icon = 'fas fa-lock',
-                    label = 'Enter Code',
+                    label = Kora.lang('enter_code'),
                     onSelect = function() busyWith(function() enterCode(storeId, index) end) end,
                     canInteract = function() return not working and not stateOf(storeId, 'safes', index) end,
                 },
                 {
                     icon = 'fas fa-hand-holding',
-                    label = 'Blow Up Safe',
+                    label = Kora.lang('blow_up_safe'),
                     onSelect = function() busyWith(function() blowSafe(storeId, index, coords) end) end,
                     canInteract = function()
                         return not working and not stateOf(storeId, 'safes', index) and exports['qb-inventory']:HasItem(defaults.thermiteItem)
@@ -138,7 +138,7 @@ local function loadStores()
                 },
                 {
                     icon = 'fas fa-hand-holding',
-                    label = 'Retrieve Loot',
+                    label = Kora.lang('retrieve_loot'),
                     onSelect = function() busyWith(function() takeLoot(storeId, index) end) end,
                     canInteract = function() return not working and stateOf(storeId, 'safes', index) == 'blown' end,
                 },
@@ -152,13 +152,11 @@ CreateThread(function()
     loadStores()
 end)
 
--- A store was added, changed or deleted in the creator.
 RegisterNetEvent('kora_robberies:client:reloadStores', function()
     if source ~= 65535 then return end
     loadStores()
 end)
 
--- A register or safe changed state. 'free' means it is available again.
 RegisterNetEvent('kora_robberies:client:store', function(storeId, kind, index, name)
     if source ~= 65535 or not states[storeId] then return end
     states[storeId][kind][index] = name ~= 'free' and name or nil

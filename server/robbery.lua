@@ -1,10 +1,12 @@
 local States = {}
 local Sessions = {}
+local StateTimers = {}
 local defaults = Config.Robberies.House.defaults
 local robberyTime = math.floor((defaults.robberyTime or (1000 * 60) * 15) / 1000) -- seconds
+local advance
 
 local function notify(src, message, kind)
-    Kora.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send(src, { title = Kora.lang('robbery_title'), message = message, type = kind or 'error' })
 end
 
 local function itemLabel(name)
@@ -49,8 +51,18 @@ AddEventHandler('playerDropped', function()
 end)
 
 local function setState(houseId, state, seconds)
+    local timer = (StateTimers[houseId] or 0) + 1
+    StateTimers[houseId] = timer
     States[houseId] = state and { state = state, endsAt = os.time() + seconds } or nil
     TriggerClientEvent('kora_robberies:client:state', -1, houseId, state, state and seconds * 1000 or nil)
+
+    if not state then return end
+
+    CreateThread(function()
+        Wait(math.max(0, seconds) * 1000)
+        if StateTimers[houseId] ~= timer then return end
+        advance(houseId)
+    end)
 end
 
 local function remainingSeconds(houseId)
@@ -70,22 +82,11 @@ local function closeHouse(houseId)
     setState(houseId, cooldown > 0 and 'cooldown' or nil, cooldown)
 end
 
-local function advance(houseId)
+advance = function(houseId)
     local entry = States[houseId]
     if not entry then return end
     if entry.state == 'open' then closeHouse(houseId) else setState(houseId, nil) end
 end
-
-CreateThread(function()
-    while true do
-        Wait(1000)
-        local now, due = os.time(), {}
-        for houseId, entry in pairs(States) do
-            if entry.endsAt <= now then due[#due + 1] = houseId end
-        end
-        for _, houseId in ipairs(due) do advance(houseId) end
-    end
-end)
 
 local function inHours(hours)
     if not hours then return true end
@@ -103,8 +104,8 @@ local function requiredItems(house, setup)
 end
 
 local function checkBreakIn(src, house, setup)
-    if not inHours(house.hours) then return false, 'Nobody leaves this house empty right now. Come back at another time.' end
-    if PoliceOnDuty() < house.minPolice then return false, 'Not enough police in the city.' end
+    if not inHours(house.hours) then return false, Kora.lang('house_hours_closed') end
+    if PoliceOnDuty() < house.minPolice then return false, Kora.lang('police_needed') end
 
     local missing = {}
     for _, need in ipairs(requiredItems(house, setup)) do
@@ -112,7 +113,7 @@ local function checkBreakIn(src, house, setup)
             missing[#missing + 1] = itemLabel(need.item)
         end
     end
-    if #missing > 0 then return false, 'You need: ' .. table.concat(missing, ', ') .. '.' end
+    if #missing > 0 then return false, Kora.lang('you_need') .. table.concat(missing, ', ') .. '.' end
     return true
 end
 
@@ -143,23 +144,23 @@ Kora.callback.register('kora_robberies:world', function()
 end)
 
 Kora.callback.register('kora_robberies:breakin', function(src, houseId)
-    if onCooldown(src, 'breakin') then return false, 'Slow down.' end
+    if onCooldown(src, 'breakin') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'breakin', 2000)
 
     local house = validId(houseId) and Houses[houseId]
-    if not house then return false, 'Unknown house.' end
-    if not isNear(src, house.coords, 4.0) then return false, 'You are too far away.' end
+    if not house then return false, Kora.lang('unknown_house') end
+    if not isNear(src, house.coords, 4.0) then return false, Kora.lang('you_are_too_far_away') end
 
     local setup = Setups[house.shell]
-    if not (setup and setup.exit) then return false, 'Nothing to rob here.' end
+    if not (setup and setup.exit) then return false, Kora.lang('nothing_to_rob_here') end
 
     local state = States[houseId] and States[houseId].state
     if state == 'cooldown' then
-        return false, ('Someone broke in here recently. Try again in %d minutes.'):format(math.ceil(remainingSeconds(houseId) / 60))
+        return false, Kora.lang('recent_break_in', math.ceil(remainingSeconds(houseId) / 60))
     end
 
     local session = Sessions[houseId]
-    if session and session.players[src] then return false, 'You are already inside.' end
+    if session and session.players[src] then return false, Kora.lang('you_are_already_inside') end
 
     if state ~= 'open' then
         local ok, message = checkBreakIn(src, house, setup)
@@ -167,7 +168,7 @@ Kora.callback.register('kora_robberies:breakin', function(src, houseId)
 
         local needs = requiredItems(house, setup)
         if defaults.consumeBreakItem and not exports['qb-inventory']:RemoveItem(src, needs[1].item, 1) then
-            return false, 'You need: ' .. itemLabel(needs[1].item) .. '.'
+            return false, Kora.lang('you_need') .. itemLabel(needs[1].item) .. '.'
         end
 
         session = { players = {}, props = {} }
@@ -193,31 +194,31 @@ end)
 
 local function searchable(src, houseId, index)
     local session = validId(houseId) and Sessions[houseId]
-    if not (session and session.players[src]) then return nil, 'You are not inside.' end
+    if not (session and session.players[src]) then return nil, Kora.lang('you_are_not_inside') end
 
     local house = Houses[houseId]
     local setup = house and Setups[house.shell]
     local prop = setup and type(index) == 'number' and setup.props[index]
     local list = prop and prop.list and Lists[prop.list]
-    if not (list and #list.items > 0) then return nil, 'There is nothing here.' end
+    if not (list and #list.items > 0) then return nil, Kora.lang('there_is_nothing_here') end
 
-    if not isNear(src, HouseSpawnCoords(house), 120.0) then return nil, 'You are too far away.' end
+    if not isNear(src, HouseSpawnCoords(house), 120.0) then return nil, Kora.lang('you_are_too_far_away') end
     return session, list, prop
 end
 
 Kora.callback.register('kora_robberies:prop:begin', function(src, houseId, index)
-    if onCooldown(src, 'search') then return false, 'Slow down.' end
+    if onCooldown(src, 'search') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'search', 500)
 
     local session, list, prop = searchable(src, houseId, index)
     if not session then return false, list end
 
     local state = session.props[index] or {}
-    if state.looted then return false, 'Already searched.' end
-    if isBusy(state) then return false, 'Someone is already searching this.' end
+    if state.looted then return false, Kora.lang('already_searched') end
+    if isBusy(state) then return false, Kora.lang('spot_being_searched') end
 
     for _, other in pairs(session.props) do
-        if other.busyBy == src and isBusy(other) then return false, 'Finish what you are doing first.' end
+        if other.busyBy == src and isBusy(other) then return false, Kora.lang('finish_current_action') end
     end
 
     state.busyBy, state.started, state.duration = src, GetGameTimer(), prop.time or DefaultSearch.time
@@ -231,23 +232,23 @@ Kora.callback.register('kora_robberies:prop:finish', function(src, houseId, inde
     if not session then return false, list end
 
     local state = session.props[index]
-    if not (state and state.busyBy == src and not state.looted) then return false, 'You are not searching that.' end
+    if not (state and state.busyBy == src and not state.looted) then return false, Kora.lang('you_are_not_searching_that') end
     if GetGameTimer() - state.started < state.duration - 1000 then
         Kora.print.warn(('[kora_robberies] player %s finished a search too fast'):format(src))
         releaseProp(houseId, index)
-        return false, 'Too fast.'
+        return false, Kora.lang('too_fast')
     end
 
     local entry = list.items[math.random(#list.items)]
     if not exports['qb-inventory']:AddItem(src, entry.item, entry.amount) then
         releaseProp(houseId, index)
-        return false, 'You cannot carry that.'
+        return false, Kora.lang('you_cannot_carry_that')
     end
 
     state.looted, state.busyBy = true, nil
     broadcast(houseId, index, 'looted')
 
-    notify(src, ('You found %dx %s.'):format(entry.amount, itemLabel(entry.item)), 'success')
+    notify(src, Kora.lang('items_found', entry.amount, itemLabel(entry.item)), 'success')
     return true
 end)
 

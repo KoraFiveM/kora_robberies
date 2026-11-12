@@ -77,7 +77,9 @@ end
 
 function searchItems(query, isAdded)
     local text = trim(query, 64)
-    if not text then return false, 'Type part of an item name or label to search.' end
+    if not text then
+        return false, Kora.lang('item_search_required')
+    end
     local needle = text:lower()
 
     local shared, results = allItems(), {}
@@ -101,7 +103,9 @@ end
 local tables = { lists = 'kora_robberies_lists', shells = 'kora_robberies_shells', houses = 'kora_robberies_houses', stores = 'kora_robberies_stores' }
 function dbSave(kind, id, data)
     local name = tables[kind]
-    if not name then return false, 'Unknown table.' end
+    if not name then
+        return false, Kora.lang('unknown_table')
+    end
 
     local rows = Kora.sql.query(('SELECT `id` FROM `%s` WHERE `id` = ? LIMIT 1'):format(name), { id })
     if rows and rows[1] then
@@ -112,7 +116,9 @@ end
 
 function dbDelete(kind, id)
     local name = tables[kind]
-    if not name then return false, 'Unknown table.' end
+    if not name then
+        return false, Kora.lang('unknown_table')
+    end
     return Kora.sql.update(('DELETE FROM `%s` WHERE `id` = ?'):format(name), { id })
 end
 

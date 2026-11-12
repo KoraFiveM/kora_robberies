@@ -2,7 +2,7 @@ local defaults = Config.Robberies.Store.defaults
 local State = {}
 
 local function notify(src, message, kind)
-    Kora.notify.send(src, { title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send(src, { title = Kora.lang('robbery_title'), message = message, type = kind or 'error' })
 end
 
 local function stateOf(storeId)
@@ -57,9 +57,9 @@ end
 local function spotFor(src, storeId, kind, index)
     local store = validId(storeId) and Stores[storeId]
     local spot = store and type(index) == 'number' and store[kind][index]
-    if not spot then return nil, 'Unknown spot.' end
-    if not isNear(src, spot.coords, 5.0) then return nil, 'You are too far away.' end
-    if PoliceOnDuty() < store.minPolice then return nil, 'Not enough police in the city.' end
+    if not spot then return nil, Kora.lang('unknown_spot') end
+    if not isNear(src, spot.coords, 5.0) then return nil, Kora.lang('you_are_too_far_away') end
+    if PoliceOnDuty() < store.minPolice then return nil, Kora.lang('police_needed') end
     return store, spot
 end
 
@@ -79,7 +79,7 @@ local function stickyCode(storeId)
 end
 
 Kora.callback.register('kora_robberies:stores', function()
-    if not DataLoaded then return false end -- not ready yet: the client asks again
+    if not DataLoaded then return false end
 
     local list = {}
     for id, store in pairs(Stores) do
@@ -102,18 +102,18 @@ Kora.callback.register('kora_robberies:stores', function()
 end)
 
 Kora.callback.register('kora_robberies:register:begin', function(src, storeId, index)
-    if onCooldown(src, 'register') then return false, 'Slow down.' end
+    if onCooldown(src, 'register') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'register', 500)
 
     local store, spot = spotFor(src, storeId, 'registers', index)
     if not store then return false, spot end
 
     local register = spotState(storeId, 'registers', index)
-    if register.robbed then return false, 'This register is empty.' end
-    if isBusy(register) then return false, 'Someone is already robbing this.' end
+    if register.robbed then return false, Kora.lang('this_register_is_empty') end
+    if isBusy(register) then return false, Kora.lang('register_being_robbed') end
 
     for _, other in pairs(stateOf(storeId).registers) do
-        if other.busyBy == src and isBusy(other) then return false, 'Finish what you are doing first.' end
+        if other.busyBy == src and isBusy(other) then return false, Kora.lang('finish_current_action') end
     end
 
     register.busyBy, register.started, register.duration = src, GetGameTimer(), spot.time or DefaultSearch.time
@@ -126,17 +126,17 @@ Kora.callback.register('kora_robberies:register:finish', function(src, storeId, 
     if not store then return false, spot end
 
     local register = spotState(storeId, 'registers', index)
-    if not (register.busyBy == src and not register.robbed) then return false, 'You are not robbing that.' end
+    if not (register.busyBy == src and not register.robbed) then return false, Kora.lang('you_are_not_robbing_that') end
     if GetGameTimer() - register.started < register.duration - 1000 then
         Kora.print.warn(('[kora_robberies] player %s finished a register too fast'):format(src))
         releaseRegister(storeId, index)
-        return false, 'Too fast.'
+        return false, Kora.lang('too_fast')
     end
 
     local amount = pay(src, defaults.registerCash)
     if not amount then
         releaseRegister(storeId, index)
-        return false, 'You cannot carry that.'
+        return false, Kora.lang('you_cannot_carry_that')
     end
 
     register.robbed, register.busyBy = true, nil
@@ -146,10 +146,10 @@ Kora.callback.register('kora_robberies:register:finish', function(src, storeId, 
         broadcast(storeId, 'registers', index, 'free')
     end)
 
-    notify(src, ('You took $%d.'):format(amount), 'success')
+    notify(src, Kora.lang('cash_taken', amount), 'success')
     if math.random(100) <= (spot.stickyChance or 0) then
         exports['qb-inventory']:AddItem(src, defaults.stickyNoteItem, 1, nil, { code = stickyCode(storeId) })
-        notify(src, 'There was a sticky note with a number on it.', 'success')
+        notify(src, Kora.lang('sticky_note_found'), 'success')
     end
     return true
 end)
@@ -165,9 +165,9 @@ local function closedSafe(src, storeId, index)
     local store, spot = spotFor(src, storeId, 'safes', index)
     if not store then return nil, spot end
     local safe = spotState(storeId, 'safes', index)
-    if safe.robbed then return nil, 'This safe is empty.' end
-    if safe.blowing then return nil, 'The safe is being blown.' end
-    if safe.blown then return nil, 'The safe is already open.' end
+    if safe.robbed then return nil, Kora.lang('this_safe_is_empty') end
+    if safe.blowing then return nil, Kora.lang('the_safe_is_being_blown') end
+    if safe.blown then return nil, Kora.lang('the_safe_is_already_open') end
     return safe
 end
 
@@ -182,27 +182,27 @@ local function emptySafe(storeId, index, safe)
 end
 
 Kora.callback.register('kora_robberies:safe:code', function(src, storeId, index, code)
-    if onCooldown(src, 'safe') then return false, 'Slow down.' end
+    if onCooldown(src, 'safe') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'safe', 1000)
 
     local safe, err = closedSafe(src, storeId, index)
     if not safe then return false, err end
     local state = stateOf(storeId)
-    if not (state.code and tonumber(code) == state.code) then return false, 'Wrong code.' end
+    if not (state.code and tonumber(code) == state.code) then return false, Kora.lang('wrong_code') end
     local amount = pay(src, defaults.safeCash)
-    if not amount then return false, 'You cannot carry that.' end
+    if not amount then return false, Kora.lang('you_cannot_carry_that') end
     emptySafe(storeId, index, safe)
-    notify(src, ('You took $%d.'):format(amount), 'success')
+    notify(src, Kora.lang('cash_taken', amount), 'success')
     return true
 end)
 
 Kora.callback.register('kora_robberies:safe:blow', function(src, storeId, index)
-    if onCooldown(src, 'safe') then return false, 'Slow down.' end
+    if onCooldown(src, 'safe') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'safe', 1000)
 
     local safe, err = closedSafe(src, storeId, index)
     if not safe then return false, err end
-    if not exports['qb-inventory']:RemoveItem(src, defaults.thermiteItem, 1) then return false, 'You need thermite.' end
+    if not exports['qb-inventory']:RemoveItem(src, defaults.thermiteItem, 1) then return false, Kora.lang('you_need_thermite') end
 
     local time = math.random(defaults.blowTime.min, defaults.blowTime.max)
     safe.blowing = true
@@ -213,7 +213,7 @@ Kora.callback.register('kora_robberies:safe:blow', function(src, storeId, index)
         if State[storeId] ~= state then return end
         safe.blowing, safe.blown = false, true
         broadcast(storeId, 'safes', index, 'blown')
-        later(storeId, function() -- nobody took it: it closes again
+        later(storeId, function()
             if safe.blown then
                 safe.blown = false
                 broadcast(storeId, 'safes', index, 'free')
@@ -224,18 +224,18 @@ Kora.callback.register('kora_robberies:safe:blow', function(src, storeId, index)
 end)
 
 Kora.callback.register('kora_robberies:safe:loot', function(src, storeId, index)
-    if onCooldown(src, 'safe') then return false, 'Slow down.' end
+    if onCooldown(src, 'safe') then return false, Kora.lang('slow_down') end
     startCooldown(src, 'safe', 1000)
 
     local store, spot = spotFor(src, storeId, 'safes', index)
     if not store then return false, spot end
     local safe = spotState(storeId, 'safes', index)
-    if safe.robbed or not safe.blown then return false, 'There is nothing to take.' end
+    if safe.robbed or not safe.blown then return false, Kora.lang('there_is_nothing_to_take') end
 
     local amount = pay(src, defaults.safeCash)
-    if not amount then return false, 'You cannot carry that.' end
+    if not amount then return false, Kora.lang('you_cannot_carry_that') end
     emptySafe(storeId, index, safe)
-    notify(src, ('You took $%d.'):format(amount), 'success')
+    notify(src, Kora.lang('cash_taken', amount), 'success')
     return true
 end)
 
