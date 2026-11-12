@@ -30,3 +30,5 @@ Build them in `/houseCreator` on the **Stores** page. A store has a name, its ow
 - A robbed register or safe stays empty for `resetTime`. Cash amounts, items and the thermite time are in `Config.Robberies.Store.defaults`.
 - The stores table is created automatically on start (first-install example stores are included).
 - The server checks the distance, the police and who is robbing what. Only positions and settings go to players; the chances and the safe code never do.
+
+Full documentation: see [docs/](docs/index.md).
