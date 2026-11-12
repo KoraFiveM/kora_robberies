@@ -1,6 +1,6 @@
 # kora_robberies: house robbery creator
 
-Staff run `/houseCreator` (needs the ace set in `Config.Creator`, `command` by default).
+Staff run `/robberyCreator` (needs the ace set in `Config.Creator`, `command` by default).
 
 1. **Item lists**: make a list of items and amounts once (e.g. Kitchen) and reuse it on any prop.
 2. **Shells**: pick a shell from `config.lua`, enter it, aim where the exit goes, then aim and place props and give each one an item list. Leave the prop model empty to place a box target (no prop) where you aim instead. Props are saved relative to the shell.
@@ -24,7 +24,7 @@ Shell keys come from the label in `config.lua` ('Tier 1 House' -> `tier_1_house`
 `client/shell.lua` is the only file that knows what a spawned shell looks like.
 
 ## Stores (from kora_storerobbery)
-Build them in `/houseCreator` on the **Stores** page. A store has a name, its own **minimum police**, **registers** and **safes**.
+Build them in `/robberyCreator` on the **Stores** page. A store has a name, its own **minimum police**, **registers** and **safes**.
 - **Registers:** aim and place as many as you like. A register uses the same settings as a prop (target text, progress text, time, animation, blocked controls) and has its own **sticky note chance**. Robbing one is a progress bar, then the skill check (`qb-minigames`, skipped if it is not running), then cash.
 - **Safes:** aim and place. A sticky note carries the store's safe code, which opens any safe in that store. Without it, **Blow Up Safe** uses a thermite and, when it has burned, **Retrieve Loot** gives the cash.
 - A robbed register or safe stays empty for `resetTime`. Cash amounts, items and the thermite time are in `Config.Robberies.Store.defaults`.

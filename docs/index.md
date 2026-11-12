@@ -23,14 +23,15 @@ Current version: see `version` in `fxmanifest.lua`.
 
 Declared in `fxmanifest.lua`: `kora_lib`, `kora_sql`, `kora_core`, `kora_interior`. Used but not declared: `kora_target`, an inventory that provides the `qb-inventory` exports, and optionally `qb-minigames`. Details in [Installation](./installation.md).
 
-## Pages
+## Documentation map
 
-- [Installation](./installation.md) - dependencies, server.cfg order, first start
+- [Installation](./installation.md) - install steps, manifest and load order, dependencies in detail
+- [How to use](./how-to-use.md) - configuration shape, database and seed data, house break-ins, store robberies, the creator
+- [Commands](./commands.md) - `/robberyCreator`, its ACE and the callback permission check
 - [Creator](./creator.md) - the staff app: lists, shells, houses, stores
 - [House robberies](./houses.md) - how a house robbery works for players
 - [Store robberies](./stores.md) - registers, safes and sticky notes
 - [Configuration](./configuration.md) - `config.lua`, limits and defaults
-- [Commands and permissions](./commands.md) - the creator command and its ACE
 - [Events and callbacks](./events.md) - events, callbacks, FFT hooks
 - [Database](./database.md) - tables and stored JSON
 - [Items](./items.md) - items the resource uses
