@@ -4,7 +4,7 @@ lua54 'yes'
 
 name 'kora_robberies'
 author 'qbcore2'
-version '0.2.0'
+version '0.2.1'
 description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
 
 dependency 'kora_lib'
