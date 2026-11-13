@@ -4,8 +4,12 @@ end
 
 local function adminCallback(name, handler)
     Kora.callback.register(name, function(src, ...)
-        if not isAdmin(src) then return fail('Admin permission required.') end
-        if not DataLoaded then return fail('The data is still loading. Try again in a moment.') end
+        if not isAdmin(src) then
+            return fail(Kora.lang('admin_permission_required'))
+        end
+        if not DataLoaded then
+            return fail(Kora.lang('data_loading'))
+        end
         return handler(src, ...)
     end)
 end
@@ -52,15 +56,21 @@ adminCallback('kora_robberies:creator:get', payload)
 
 adminCallback('kora_robberies:creator:lists:create', function(_, label)
     label = trim(label, 48)
-    if not label then return fail('Enter a name for the list.') end
+    if not label then
+        return fail(Kora.lang('enter_a_name_for_the_list'))
+    end
 
     local count = 0
     for _ in pairs(Lists) do count = count + 1 end
-    if count >= Limits.lists then return fail(('You can have %d lists at most.'):format(Limits.lists)) end
+    if count >= Limits.lists then
+        return fail(Kora.lang('list_limit', Limits.lists))
+    end
 
     local id = makeId(label, function(candidate) return Lists[candidate] ~= nil end)
     local ok, err = SaveList(id, { label = label, items = {} })
-    if not ok then return fail(err or 'Failed to save.') end
+    if not ok then
+        return fail(err or Kora.lang('save_failed'))
+    end
 
     local result = payload()
     result.id = id
@@ -69,19 +79,25 @@ end)
 
 adminCallback('kora_robberies:creator:lists:items', function(_, id, items)
     local list = validId(id) and Lists[id]
-    if not list then return fail('Unknown list.') end
+    if not list then
+        return fail(Kora.lang('unknown_list'))
+    end
 
     local clean, err = cleanItems(items, list.items)
     if not clean then return fail(err) end
 
     local ok, saveErr = SaveList(id, { label = list.label, items = clean })
-    if not ok then return fail(saveErr or 'Failed to save.') end
+    if not ok then
+        return fail(saveErr or Kora.lang('save_failed'))
+    end
     return payload()
 end)
 
 adminCallback('kora_robberies:creator:lists:search', function(_, query, id)
     local list = validId(id) and Lists[id]
-    if not list then return fail('Unknown list.') end
+    if not list then
+        return fail(Kora.lang('unknown_list'))
+    end
 
     local inList = {}
     for _, entry in ipairs(list.items) do inList[entry.item] = true end
@@ -89,21 +105,29 @@ adminCallback('kora_robberies:creator:lists:search', function(_, query, id)
 end)
 
 adminCallback('kora_robberies:creator:lists:delete', function(_, id)
-    if not (validId(id) and Lists[id]) then return fail('Unknown list.') end
+    if not (validId(id) and Lists[id]) then
+        return fail(Kora.lang('unknown_list'))
+    end
     local ok, err = DeleteList(id)
-    if not ok then return fail(err or 'Failed to delete the list.') end
+    if not ok then
+        return fail(err or Kora.lang('delete_list_failed'))
+    end
     return payload()
 end)
 
 local function updateSetup(key, change)
-    if not HouseShellByKey[key] then return fail('Unknown shell.') end
+    if not HouseShellByKey[key] then
+        return fail(Kora.lang('unknown_shell'))
+    end
 
     local setup = copyTable(Setups[key] or { props = {} })
     local err = change(setup)
     if err then return fail(err) end
 
     local ok, saveErr = SaveSetup(key, setup)
-    if not ok then return fail(saveErr or 'Failed to save.') end
+    if not ok then
+        return fail(saveErr or Kora.lang('save_failed'))
+    end
     return payload()
 end
 
@@ -132,21 +156,29 @@ adminCallback('kora_robberies:creator:shells:breakItem', function(_, key, item)
 end)
 
 adminCallback('kora_robberies:creator:shells:clear', function(_, key)
-    if not (HouseShellByKey[key] and Setups[key]) then return fail('That shell has no setup.') end
+    if not (HouseShellByKey[key] and Setups[key]) then
+        return fail(Kora.lang('that_shell_has_no_setup'))
+    end
     local ok, err = DeleteSetup(key)
-    if not ok then return fail(err or 'Failed to clear the setup.') end
+    if not ok then
+        return fail(err or Kora.lang('clear_setup_failed'))
+    end
     return payload()
 end)
 
 local function updateHouse(id, change)
     local house = validId(id) and Houses[id]
-    if not house then return fail('Unknown house.') end
+    if not house then
+        return fail(Kora.lang('unknown_house'))
+    end
 
     local updated, err = change(copyTable(house))
     if not updated then return fail(err) end
 
     local ok, saveErr = SaveHouse(id, updated)
-    if not ok then return fail(saveErr or 'Failed to save.') end
+    if not ok then
+        return fail(saveErr or Kora.lang('save_failed'))
+    end
     return payload()
 end
 
@@ -159,14 +191,18 @@ local function defaultHouseLabel(shellKey)
 end
 
 adminCallback('kora_robberies:creator:houses:create', function(_, shellKey, coords, label)
-    if not HouseShellByKey[shellKey] then return fail('Pick a shell.') end
+    if not HouseShellByKey[shellKey] then
+        return fail(Kora.lang('pick_a_shell'))
+    end
     local entrance, err = cleanEntrance(coords)
     if not entrance then return fail(err) end
     label = trim(label, 48) or defaultHouseLabel(shellKey)
 
     local id = makeId(label, function(candidate) return Houses[candidate] ~= nil end)
     local ok, saveErr = SaveHouse(id, newHouse(label, shellKey, entrance))
-    if not ok then return fail(saveErr or 'Failed to save.') end
+    if not ok then
+        return fail(saveErr or Kora.lang('save_failed'))
+    end
 
     local result = payload()
     result.id = id
@@ -189,31 +225,43 @@ adminCallback('kora_robberies:creator:houses:coords', function(_, id, coords)
 end)
 
 adminCallback('kora_robberies:creator:houses:delete', function(_, id)
-    if not (validId(id) and Houses[id]) then return fail('Unknown house.') end
+    if not (validId(id) and Houses[id]) then
+        return fail(Kora.lang('unknown_house'))
+    end
     local ok, err = DeleteHouse(id)
-    if not ok then return fail(err or 'Failed to delete the house.') end
+    if not ok then
+        return fail(err or Kora.lang('delete_house_failed'))
+    end
     return payload()
 end)
 
 local function updateStore(id, change)
     local store = validId(id) and Stores[id]
-    if not store then return fail('Unknown store.') end
+    if not store then
+        return fail(Kora.lang('unknown_store'))
+    end
 
     local updated, err = change(copyTable(store))
     if not updated then return fail(err) end
 
     local ok, saveErr = SaveStore(id, updated)
-    if not ok then return fail(saveErr or 'Failed to save.') end
+    if not ok then
+        return fail(saveErr or Kora.lang('save_failed'))
+    end
     return payload()
 end
 
 adminCallback('kora_robberies:creator:stores:create', function(_, label)
     label = trim(label, 48)
-    if not label then return fail('Enter a name for the store.') end
+    if not label then
+        return fail(Kora.lang('enter_a_name_for_the_store'))
+    end
 
     local id = makeId(label, function(candidate) return Stores[candidate] ~= nil end)
     local ok, err = SaveStore(id, newStore(label))
-    if not ok then return fail(err or 'Failed to save.') end
+    if not ok then
+        return fail(err or Kora.lang('save_failed'))
+    end
 
     local result = payload()
     result.id = id
@@ -245,13 +293,17 @@ adminCallback('kora_robberies:creator:stores:safes', function(_, id, list)
 end)
 
 adminCallback('kora_robberies:creator:stores:delete', function(_, id)
-    if not (validId(id) and Stores[id]) then return fail('Unknown store.') end
+    if not (validId(id) and Stores[id]) then
+        return fail(Kora.lang('unknown_store'))
+    end
     local ok, err = DeleteStore(id)
-    if not ok then return fail(err or 'Failed to delete the store.') end
+    if not ok then
+        return fail(err or Kora.lang('delete_store_failed'))
+    end
     return payload()
 end)
 
-Kora.commands.add(Config.Creator.command, 'Open the robbery creator', nil, false, function(source)
+Kora.commands.add(Config.Creator.command, Kora.lang('open_creator_command'), nil, false, function(source)
     TriggerClientEvent('kora_robberies:creator:open', source)
 end, {
     checkPermission = function(source)
@@ -262,7 +314,7 @@ end, {
             print(('[kora_robberies] %s'):format(message))
             return
         end
-        Kora.notify.send(source, { title = 'House Creator', message = message, type = type_ })
+        Kora.notify.send(source, { title = Kora.lang('house_creator'), message = message, type = type_ })
     end,
     resource = GetCurrentResourceName(),
 })

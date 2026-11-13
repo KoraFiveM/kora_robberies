@@ -16,11 +16,11 @@ local function text(value)
 end
 
 local function toast(message, kind)
-    Kora.notify.send({ title = 'House Creator', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = Kora.lang('house_creator'), message = message, type = kind or 'error' })
 end
 
 local function confirmed(title, message)
-    local answer = Kora.nui.openAlert({ title = title, message = message, confirmLabel = 'Delete' })
+    local answer = Kora.nui.openAlert({ title = title, message = message, confirmLabel = Kora.lang('delete') })
     return answer and answer.confirmed == true
 end
 
@@ -68,33 +68,39 @@ end
 local function searchFields(search)
     local anim = search.anim or {}
     local fields = {
-        { id = 'label', label = 'Target label', type = 'text', default = search.label or '', description = 'Optional. What the target says, e.g. Search the fridge.' },
-        { id = 'progressLabel', label = 'Progress text', type = 'text', default = search.progressLabel, description = 'Shown on the progress bar while searching.' },
-        { id = 'time', label = 'Search time (ms)', type = 'number', min = 500, max = 300000, required = true, default = search.time },
-        { id = 'animDict', label = 'Animation dictionary', type = 'text', default = anim.dict or '',
-            description = 'e.g. mp_arresting. Leave the dictionary and the clip empty for no animation.' },
-        { id = 'animClip', label = 'Animation clip', type = 'text', default = anim.clip or '', description = 'The clip inside that dictionary, e.g. a_uncuff.' },
-        { id = 'animFlag', label = 'Animation flag', type = 'number', min = 0, max = 65535, default = anim.flag or DefaultSearch.anim.flag,
-            description = 'GTA animation flags. 49 keeps the upper body animating while allowing movement.' },
+        { id = 'label', label = Kora.lang('target_label'), type = 'text', default = search.label or '', description = Kora.lang('target_label_help') },
+        { id = 'progressLabel', label = Kora.lang('progress_text'), type = 'text', default = search.progressLabel, description = Kora.lang('search_progress_help') },
+        { id = 'time', label = Kora.lang('search_time_ms'), type = 'number', min = 500, max = 300000, required = true, default = search.time },
+        { id = 'animDict', label = Kora.lang('animation_dictionary'), type = 'text', default = anim.dict or '',
+            description = Kora.lang('anim_dict_help') },
+        { id = 'animClip', label = Kora.lang('animation_clip'), type = 'text', default = anim.clip or '', description = Kora.lang('anim_clip_help') },
+        { id = 'animFlag', label = Kora.lang('animation_flag'), type = 'number', min = 0, max = 65535, default = anim.flag or DefaultSearch.anim.flag,
+            description = Kora.lang('anim_flag_help') },
     }
     local blocked = {}
     for _, option in ipairs(ProgressDisableOptions) do
         if search.disable[option.value] == true then blocked[#blocked + 1] = option.value end
     end
-    fields[#fields + 1] = { id = 'disable', label = 'Block while searching', type = 'multiselect', options = ProgressDisableOptions,
-        default = blocked, description = 'Controls that are blocked while the progress bar runs.' }
+    fields[#fields + 1] = { id = 'disable', label = Kora.lang('block_while_searching'), type = 'multiselect', options = ProgressDisableOptions,
+        default = blocked, description = Kora.lang('search_controls_help') }
     return fields
 end
 
 local function searchFromValues(values)
     local time = tonumber(values.time)
-    if not time then return nil, 'Enter the search time in milliseconds.' end
+    if not time then
+        return nil, Kora.lang('search_time_required')
+    end
 
     local dict, clip = text(values.animDict), text(values.animClip)
     local anim = false
     if dict ~= '' or clip ~= '' then
-        if dict == '' or clip == '' then return nil, 'An animation needs both a dictionary and a clip.' end
-        if not DoesAnimDictExist(dict) then return nil, 'Unknown animation dictionary.' end
+        if dict == '' or clip == '' then
+            return nil, Kora.lang('anim_dict_clip_required')
+        end
+        if not DoesAnimDictExist(dict) then
+            return nil, Kora.lang('unknown_anim_dict')
+        end
         anim = { dict = dict, clip = clip, flag = math.floor(tonumber(values.animFlag) or DefaultSearch.anim.flag) }
     end
 
@@ -114,16 +120,18 @@ local function searchSummary(search)
         if search.disable[option.value] then blocked[#blocked + 1] = option.label end
     end
     return {
-        { label = 'Progress text', value = search.progressLabel },
-        { label = 'Search time', value = ('%.1f s'):format(search.time / 1000) },
-        { label = 'Animation', value = search.anim and ('%s / %s'):format(search.anim.dict, search.anim.clip) or 'None' },
-        { label = 'Blocks', value = #blocked > 0 and table.concat(blocked, ', ') or 'Nothing' },
+        { label = Kora.lang('progress_text'), value = search.progressLabel },
+        { label = Kora.lang('search_time'), value = ('%.1f s'):format(search.time / 1000) },
+        { label = Kora.lang('animation'), value = search.anim and ('%s / %s'):format(search.anim.dict, search.anim.clip) or 'None' },
+        { label = Kora.lang('blocks'), value = #blocked > 0 and table.concat(blocked, ', ') or 'Nothing' },
     }
 end
 
 local function call(name, ...)
     local result, err = Kora.callback.trigger('kora_robberies:creator:' .. name, ...)
-    if not result then return nil, err or 'Something went wrong.' end
+    if not result then
+        return nil, err or Kora.lang('request_failed')
+    end
     if result.lists then data = result end
     return result
 end
@@ -180,13 +188,13 @@ local function enterShell(key)
     SetEntityCoords(ped, entry.x, entry.y, entry.z)
     Wait(500)
     rebuildPreview()
-    toast(('You are inside the %s shell. Aim the exit and place props from the creator.'):format(HouseShellByKey[key].label), 'success')
+    toast(Kora.lang('inside_shell_place_props', HouseShellByKey[key].label), 'success')
 end
 
 local function notInsideReason(key)
     if not editing then return 'You are not inside a shell yet. Press Enter the shell to edit.' end
     if editing.key ~= key then
-        return ('You are inside the %s shell. Leave it first, or open that shell\'s page.'):format(HouseShellByKey[editing.key].label)
+        return Kora.lang('inside_shell_leave_first', HouseShellByKey[editing.key].label)
     end
 end
 
@@ -235,7 +243,7 @@ local function placeExit()
     local offset = ToShellOffset(editing.spawned, vector3(c.x, c.y, c.z), c.w)
     local result, err = call('shells:exit', editing.key, offset)
     if not result then return toast(err) end
-    toast('Exit saved.', 'success')
+    toast(Kora.lang('exit_saved'), 'success')
 end
 
 local function placeHouses(key)
@@ -247,7 +255,7 @@ local function placeHouses(key)
         local result, err = call('houses:create', key, c)
         if not result then return toast(err) end
         placed = placed + 1
-        toast(('House %d placed.'):format(placed), 'success')
+        toast(Kora.lang('house_placed', placed), 'success')
     end
 end
 
@@ -257,7 +265,7 @@ local function moveHouse(id)
 
     local result, err = call('houses:coords', id, c)
     if not result then return toast(err) end
-    toast('Entrance moved.', 'success')
+    toast(Kora.lang('entrance_moved'), 'success')
 end
 
 -- Aims and saves one register or safe at a time, until the admin cancels. tool.field is 'registers' or 'safes'.
@@ -302,17 +310,17 @@ local function listsView()
     end
 
     return {
-        id = 'lists', label = 'Item lists', icon = 'Package',
+        id = 'lists', label = Kora.lang('item_lists'), icon = 'Package',
         content = {
-            title = 'Item lists',
-            description = 'Make a list of items and amounts once, then give it to props in any shell. e.g. Kitchen.',
+            title = Kora.lang('item_lists'),
+            description = Kora.lang('item_list_help'),
             blocks = {
                 {
-                    type = 'form', id = 'list-create', title = 'New list',
-                    fields = { { id = 'name', label = 'Name', type = 'text', required = true } },
-                    action = { id = 'list:create', label = 'Create list' },
+                    type = 'form', id = 'list-create', title = Kora.lang('new_list'),
+                    fields = { { id = 'name', label = Kora.lang('name'), type = 'text', required = true } },
+                    action = { id = 'list:create', label = Kora.lang('create_list') },
                 },
-                { type = 'list', id = 'list-list', layout = 'cards', columns = 3, items = items, empty = 'No lists yet.' },
+                { type = 'list', id = 'list-list', layout = 'cards', columns = 3, items = items, empty = Kora.lang('no_lists_yet') },
             },
         },
     }
@@ -323,8 +331,8 @@ local function foundCards(results)
     for _, result in ipairs(results) do
         cards[#cards + 1] = {
             id = result.name, label = result.label, description = result.name, image = result.image,
-            metadata = result.added and { { label = 'Status', value = 'Already in the list' } } or nil,
-            actions = result.added and {} or { { id = 'list:add:' .. result.name, label = 'Add', icon = 'Plus', variant = 'primary' } },
+            metadata = result.added and { { label = Kora.lang('status'), value = 'Already in the list' } } or nil,
+            actions = result.added and {} or { { id = 'list:add:' .. result.name, label = Kora.lang('add'), icon = 'Plus', variant = 'primary' } },
         }
     end
     return cards
@@ -334,8 +342,8 @@ local function listView()
     local list = find(data.lists, selectedList)
     if not list then
         return {
-            id = 'list', label = 'List', icon = 'Package',
-            content = { title = 'List', blocks = { { type = 'empty', title = 'Pick a list first.' } } },
+            id = 'list', label = Kora.lang('list'), icon = 'Package',
+            content = { title = Kora.lang('list'), blocks = { { type = 'empty', title = Kora.lang('pick_a_list_first') } } },
         }
     end
 
@@ -343,22 +351,22 @@ local function listView()
     for _, entry in ipairs(list.items) do
         items[#items + 1] = {
             id = entry.item, label = itemLabel(entry.item), description = entry.item, image = itemImage(entry.item),
-            metadata = { { label = 'Amount', value = ('%dx'):format(entry.amount) } },
+            metadata = { { label = Kora.lang('amount'), value = ('%dx'):format(entry.amount) } },
             actions = {
-                { id = 'list:edit:' .. entry.item, label = 'Edit', icon = 'Pencil', variant = 'primary' },
-                { id = 'list:remove:' .. entry.item, label = 'Remove', icon = 'Trash2', variant = 'destructive' },
+                { id = 'list:edit:' .. entry.item, label = Kora.lang('edit'), icon = 'Pencil', variant = 'primary' },
+                { id = 'list:remove:' .. entry.item, label = Kora.lang('remove'), icon = 'Trash2', variant = 'destructive' },
             },
         }
     end
 
     local found = foundCards(search.results)
     local blocks = {
-        { type = 'list', id = 'list-items', layout = 'cards', columns = 3, title = ('Items (%d)'):format(#items), items = items, empty = 'Nothing in this list yet. Search below.' },
+        { type = 'list', id = 'list-items', layout = 'cards', columns = 3, title = ('Items (%d)'):format(#items), items = items, empty = Kora.lang('list_empty_help') },
         {
-            type = 'form', id = 'list-search', title = 'Add items',
-            fields = { { id = 'query', label = 'Search all items', type = 'text', default = search.query or '',
-                description = 'Part of an item name or label.' } },
-            action = { id = 'list:search', label = 'Search' },
+            type = 'form', id = 'list-search', title = Kora.lang('add_items'),
+            fields = { { id = 'query', label = Kora.lang('search_all_items'), type = 'text', default = search.query or '',
+                description = Kora.lang('search_hint') } },
+            action = { id = 'list:search', label = Kora.lang('search') },
         },
     }
     if search.query then
@@ -366,17 +374,17 @@ local function listView()
         blocks[#blocks + 1] = {
             type = 'list', id = 'list-results', layout = 'cards', columns = 3,
             title = ('Results for "%s" (%d%s)'):format(search.query, #found, more),
-            items = found, empty = 'No items match that search.',
+            items = found, empty = Kora.lang('no_items_match_that_search'),
         }
     end
     blocks[#blocks + 1] = {
-        type = 'actions', title = 'Danger zone',
-        actions = { { id = 'list:delete', label = 'Delete list', variant = 'destructive' } },
+        type = 'actions', title = Kora.lang('danger_zone'),
+        actions = { { id = 'list:delete', label = Kora.lang('delete_list'), variant = 'destructive' } },
     }
 
     return {
         id = 'list', label = list.label, icon = 'Package',
-        content = { title = list.label, description = 'A prop gives one of these items, picked at random, with the amount set here. Used by every prop that has this list.', blocks = blocks },
+        content = { title = list.label, description = Kora.lang('item_list_details'), blocks = blocks },
     }
 end
 
@@ -392,11 +400,11 @@ local function shellsView()
     end
 
     return {
-        id = 'shells', label = 'Shells', icon = 'Door',
+        id = 'shells', label = Kora.lang('shells'), icon = 'Door',
         content = {
-            title = 'Shells',
-            description = 'Set a shell up once: its exit and its props. Every house that uses it gets the same setup.',
-            blocks = { { type = 'list', id = 'shell-list', layout = 'cards', columns = 3, items = items, empty = 'No shells in the config.' } },
+            title = Kora.lang('shells'),
+            description = Kora.lang('shell_setup_help'),
+            blocks = { { type = 'list', id = 'shell-list', layout = 'cards', columns = 3, items = items, empty = Kora.lang('no_shells_in_the_config') } },
         },
     }
 end
@@ -404,18 +412,18 @@ end
 local function propCards(props)
     local cards = {}
     for index, prop in ipairs(props) do
-        local metadata = { { label = 'Gives', value = listLabel(prop.list) } }
+        local metadata = { { label = Kora.lang('gives'), value = listLabel(prop.list) } }
         for _, entry in ipairs(searchSummary(propSearch(prop))) do metadata[#metadata + 1] = entry end
         cards[#cards + 1] = {
             id = tostring(index),
-            label = prop.label or prop.model or 'Search spot',
+            label = prop.label or prop.model or Kora.lang('search_spot'),
             icon = prop.model and 'MapPin' or 'Square',
             description = ('%s · %s'):format(prop.model or 'Box target', coordsLabel(prop.offset)),
             metadata = metadata,
             actions = {
-                { id = 'prop:list:' .. index, label = 'Change list', icon = 'Pencil', variant = 'primary' },
-                { id = 'prop:search:' .. index, label = 'Search settings', icon = 'Timer', variant = 'primary' },
-                { id = 'prop:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' },
+                { id = 'prop:list:' .. index, label = Kora.lang('change_list'), icon = 'Pencil', variant = 'primary' },
+                { id = 'prop:search:' .. index, label = Kora.lang('search_settings'), icon = 'Timer', variant = 'primary' },
+                { id = 'prop:remove:' .. index, label = Kora.lang('delete'), icon = 'Trash2', variant = 'destructive' },
             },
         }
     end
@@ -423,7 +431,7 @@ local function propCards(props)
 end
 
 local function listOptions()
-    local options = { { value = 'none', label = 'No list' } }
+    local options = { { value = 'none', label = Kora.lang('no_list') } }
     for _, list in ipairs(data.lists) do options[#options + 1] = { value = list.id, label = list.label } end
     return options
 end
@@ -432,8 +440,8 @@ local function shellView()
     local def = HouseShellByKey[selectedShell]
     if not def then
         return {
-            id = 'shell', label = 'Shell', icon = 'Door',
-            content = { title = 'Shell', blocks = { { type = 'empty', title = 'Pick a shell first.' } } },
+            id = 'shell', label = Kora.lang('shell'), icon = 'Door',
+            content = { title = Kora.lang('shell'), blocks = { { type = 'empty', title = Kora.lang('pick_a_shell_first') } } },
         }
     end
 
@@ -446,43 +454,43 @@ local function shellView()
             type = 'actions',
             actions = {
                 { id = 'shell:exit', label = setup.exit and 'Aim and move the exit' or 'Aim and set the exit', icon = 'Door', variant = 'primary' },
-                { id = 'shell:leave', label = 'Leave the shell', icon = 'X' },
+                { id = 'shell:leave', label = Kora.lang('leave_the_shell'), icon = 'X' },
             },
         }
         local fields = {
-            { id = 'model', label = 'Prop model', type = 'text',
-                description = 'Leave empty for no prop: a box target is placed where you aim instead.' },
-            { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = 'none' },
+            { id = 'model', label = Kora.lang('prop_model'), type = 'text',
+                description = Kora.lang('prop_model_help') },
+            { id = 'list', label = Kora.lang('item_list_it_gives'), type = 'select', options = listOptions(), default = 'none' },
         }
         for _, field in ipairs(searchFields(propSearch(nil))) do fields[#fields + 1] = field end
         blocks[#blocks + 1] = {
-            type = 'form', id = 'prop-place', title = 'Place props or box targets',
+            type = 'form', id = 'prop-place', title = Kora.lang('place_props_or_box_targets'),
             fields = fields,
-            action = { id = 'prop:place', label = 'Aim and place' },
+            action = { id = 'prop:place', label = Kora.lang('aim_and_place') },
         }
     elseif editing then
-        blocks[#blocks + 1] = { type = 'empty', title = 'You are inside another shell. Leave it first.' }
+        blocks[#blocks + 1] = { type = 'empty', title = Kora.lang('other_shell_active') }
     else
         blocks[#blocks + 1] = {
             type = 'actions',
-            actions = { { id = 'shell:enter', label = 'Enter the shell to edit', icon = 'Door', variant = 'primary' } },
+            actions = { { id = 'shell:enter', label = Kora.lang('enter_the_shell_to_edit'), icon = 'Door', variant = 'primary' } },
         }
     end
 
     blocks[#blocks + 1] = {
-        type = 'form', id = 'shell-break', title = 'Break-in item',
-        fields = { { id = 'breakItem', label = 'Item needed to break in', type = 'text',
+        type = 'form', id = 'shell-break', title = Kora.lang('break_in_item'),
+        fields = { { id = 'breakItem', label = Kora.lang('item_needed_to_break_in'), type = 'text',
             default = setup.breakItem or Config.Robberies.House.defaults.breakItem,
-            description = 'The default for every house using this shell. A house can use a different one.' } },
-        action = { id = 'shell:breakItem', label = 'Save' },
+            description = Kora.lang('break_item_help') } },
+        action = { id = 'shell:breakItem', label = Kora.lang('save') },
     }
 
     local props = propCards(setup.props)
-    blocks[#blocks + 1] = { type = 'list', id = 'shell-props', layout = 'cards', columns = 3, title = ('Props (%d)'):format(#props), items = props, empty = 'No props yet. Enter the shell to place some.' }
+    blocks[#blocks + 1] = { type = 'list', id = 'shell-props', layout = 'cards', columns = 3, title = ('Props (%d)'):format(#props), items = props, empty = Kora.lang('props_empty_help') }
     if data.setups[def.key] then
         blocks[#blocks + 1] = {
-            type = 'actions', title = 'Danger zone',
-            actions = { { id = 'shell:clear', label = 'Clear this shell\'s setup', variant = 'destructive' } },
+            type = 'actions', title = Kora.lang('danger_zone'),
+            actions = { { id = 'shell:clear', label = Kora.lang('clear_this_shell_s_setup'), variant = 'destructive' } },
         }
     end
 
@@ -512,19 +520,19 @@ local function housesView()
     end
 
     return {
-        id = 'houses', label = 'Houses', icon = 'Home',
+        id = 'houses', label = Kora.lang('houses'), icon = 'Home',
         content = {
-            title = 'Houses',
-            description = 'Pick a shell, then aim at each door. Keep placing to make a bunch of houses; cancel when you are done.',
+            title = Kora.lang('houses'),
+            description = Kora.lang('house_placement_help'),
             blocks = {
                 {
-                    type = 'form', id = 'house-create', title = 'New houses',
+                    type = 'form', id = 'house-create', title = Kora.lang('new_houses'),
                     fields = {
-                        { id = 'shell', label = 'Shell', type = 'select', options = shellOptions, default = shellOptions[1] and shellOptions[1].value },
+                        { id = 'shell', label = Kora.lang('shell'), type = 'select', options = shellOptions, default = shellOptions[1] and shellOptions[1].value },
                     },
-                    action = { id = 'house:create', label = 'Aim and place houses' },
+                    action = { id = 'house:create', label = Kora.lang('aim_and_place_houses') },
                 },
-                { type = 'list', id = 'house-list', layout = 'cards', columns = 3, items = items, empty = 'No houses yet.' },
+                { type = 'list', id = 'house-list', layout = 'cards', columns = 3, items = items, empty = Kora.lang('no_houses_yet') },
             },
         },
     }
@@ -534,8 +542,8 @@ local function houseView()
     local house = find(data.houses, selectedHouse)
     if not house then
         return {
-            id = 'house', label = 'House', icon = 'Home',
-            content = { title = 'House', blocks = { { type = 'empty', title = 'Pick a house first.' } } },
+            id = 'house', label = Kora.lang('house'), icon = 'Home',
+            content = { title = Kora.lang('house'), blocks = { { type = 'empty', title = Kora.lang('pick_a_house_first') } } },
         }
     end
 
@@ -549,64 +557,64 @@ local function houseView()
             description = ('Shell: %s%s. Entrance: %s.'):format(def and def.label or house.shell, data.setups[house.shell] and '' or ' (not set up yet)', coordsLabel(house.coords)),
             blocks = {
                 {
-                    type = 'form', id = 'house-data', title = 'Settings',
+                    type = 'form', id = 'house-data', title = Kora.lang('settings'),
                     fields = {
-                        { id = 'label', label = 'Name', type = 'text', required = true, default = house.label },
-                        { id = 'minPolice', label = 'Minimum police', type = 'number', min = 0, max = 100, default = house.minPolice },
-                        { id = 'cooldown', label = 'Cooldown (minutes)', type = 'number', min = 0, max = 1440, default = house.cooldown },
-                        { id = 'security', label = 'Security system', type = 'select', default = house.security and 'enabled' or 'disabled',
-                            options = { { value = 'enabled', label = 'Enabled' }, { value = 'disabled', label = 'Disabled' } } },
-                        { id = 'breakItem', label = 'Break-in item', type = 'text', default = house.breakItem or '',
+                        { id = 'label', label = Kora.lang('name'), type = 'text', required = true, default = house.label },
+                        { id = 'minPolice', label = Kora.lang('minimum_police'), type = 'number', min = 0, max = 100, default = house.minPolice },
+                        { id = 'cooldown', label = Kora.lang('cooldown_minutes'), type = 'number', min = 0, max = 1440, default = house.cooldown },
+                        { id = 'security', label = Kora.lang('security_system'), type = 'select', default = house.security and 'enabled' or 'disabled',
+                            options = { { value = 'enabled', label = Kora.lang('enabled') }, { value = 'disabled', label = Kora.lang('disabled') } } },
+                        { id = 'breakItem', label = Kora.lang('break_in_item'), type = 'text', default = house.breakItem or '',
                             description = ('Empty uses the shell\'s item (%s).'):format((data.setups[house.shell] and data.setups[house.shell].breakItem) or Config.Robberies.House.defaults.breakItem) },
-                        { id = 'securityItem', label = 'Security item', type = 'text', default = house.securityItem or '',
+                        { id = 'securityItem', label = Kora.lang('security_item'), type = 'text', default = house.securityItem or '',
                             description = ('Also needed when the security system is on, and it alerts the police. Empty uses %s.'):format(Config.Robberies.House.defaults.securityItem) },
-                        { id = 'lowerZ', label = 'Shell depth', type = 'number', min = -300, max = 0, default = house.lowerZ or Config.Robberies.House.defaults.lowerZ,
-                            description = 'How far below the entrance the shell is spawned. Change it if the shell clips into something.' },
-                        { id = 'timeLimit', label = 'Robbery times', type = 'select', default = house.hours and 'limited' or 'any',
-                            options = { { value = 'any', label = 'Any time' }, { value = 'limited', label = 'Only between the hours below' } } },
-                        { id = 'timeFrom', label = 'From hour (0-23)', type = 'number', min = 0, max = 23, default = hours.from },
-                        { id = 'timeTo', label = 'To hour (0-23)', type = 'number', min = 0, max = 23, default = hours.to },
+                        { id = 'lowerZ', label = Kora.lang('shell_depth'), type = 'number', min = -300, max = 0, default = house.lowerZ or Config.Robberies.House.defaults.lowerZ,
+                            description = Kora.lang('shell_depth_help') },
+                        { id = 'timeLimit', label = Kora.lang('robbery_times'), type = 'select', default = house.hours and 'limited' or 'any',
+                            options = { { value = 'any', label = Kora.lang('any_time') }, { value = 'limited', label = Kora.lang('hours_limited') } } },
+                        { id = 'timeFrom', label = Kora.lang('from_hour_0_23'), type = 'number', min = 0, max = 23, default = hours.from },
+                        { id = 'timeTo', label = Kora.lang('to_hour_0_23'), type = 'number', min = 0, max = 23, default = hours.to },
                     },
-                    action = { id = 'house:save', label = 'Save' },
+                    action = { id = 'house:save', label = Kora.lang('save') },
                 },
-                { type = 'actions', actions = { { id = 'house:coords', label = 'Aim and move the entrance', icon = 'MapPin', variant = 'primary' } } },
-                { type = 'actions', title = 'Danger zone', actions = { { id = 'house:delete', label = 'Delete house', variant = 'destructive' } } },
+                { type = 'actions', actions = { { id = 'house:coords', label = Kora.lang('aim_and_move_the_entrance'), icon = 'MapPin', variant = 'primary' } } },
+                { type = 'actions', title = Kora.lang('danger_zone'), actions = { { id = 'house:delete', label = Kora.lang('delete_house'), variant = 'destructive' } } },
             },
         },
     }
 end
 
--- A register searches like a prop, with its own words for the target and the progress bar.
 local function registerSearch(register)
     local search = propSearch(register)
-    if not (register and register.label) then search.label = 'Rob Register' end
+    if not (register and register.label) then search.label = Kora.lang('rob_register') end
     if not (register and register.progressLabel) then search.progressLabel = 'Robbing Register...' end
     return search
 end
 
 local function registerFields(register)
     local fields = {
-        { id = 'stickyChance', label = 'Sticky note chance (%)', type = 'number', min = 0, max = 100,
+        { id = 'stickyChance', label = Kora.lang('sticky_note_chance'), type = 'number', min = 0, max = 100,
             default = register and register.stickyChance or Config.Robberies.Store.defaults.stickyNoteChance,
-            description = 'The chance this register gives a sticky note with the safe code.' },
+            description = Kora.lang('sticky_note_help') },
     }
     for _, field in ipairs(searchFields(registerSearch(register))) do
-        if field.id == 'time' then field.label = 'Robbery time (ms)' end
-        if field.id == 'disable' then field.label = 'Block while robbing' end
-        if field.id == 'progressLabel' then field.description = 'Shown on the progress bar while robbing.' end
-        if field.id == 'label' then field.description = 'What the target says.' end
+        if field.id == 'time' then field.label = Kora.lang('robbery_time_ms') end
+        if field.id == 'disable' then field.label = Kora.lang('block_while_robbing') end
+        if field.id == 'progressLabel' then field.description = Kora.lang('robbery_progress_help') end
+        if field.id == 'label' then field.description = Kora.lang('what_the_target_says') end
         fields[#fields + 1] = field
     end
     return fields
 end
 
--- The form values of a register: its search settings and its sticky note chance.
 local function registerFromValues(values)
     local search, err = searchFromValues(values)
     if not search then return nil, err end
 
     local chance = tonumber(values.stickyChance)
-    if not chance or chance < 0 or chance > 100 then return nil, 'Sticky note chance must be between 0 and 100.' end
+    if not chance or chance < 0 or chance > 100 then
+        return nil, Kora.lang('sticky_chance_range')
+    end
     if text(values.progressLabel) == '' then search.progressLabel = 'Robbing Register...' end
     search.stickyChance = math.floor(chance)
     return search
@@ -623,17 +631,17 @@ local function storesView()
     end
 
     return {
-        id = 'stores', label = 'Stores', icon = 'ShoppingBag',
+        id = 'stores', label = Kora.lang('stores'), icon = 'ShoppingBag',
         content = {
-            title = 'Stores',
-            description = 'A store has registers and safes. Each store sets its own minimum police.',
+            title = Kora.lang('stores'),
+            description = Kora.lang('store_setup_help'),
             blocks = {
                 {
-                    type = 'form', id = 'store-create', title = 'New store',
-                    fields = { { id = 'name', label = 'Name', type = 'text', required = true } },
-                    action = { id = 'store:create', label = 'Create store' },
+                    type = 'form', id = 'store-create', title = Kora.lang('new_store'),
+                    fields = { { id = 'name', label = Kora.lang('name'), type = 'text', required = true } },
+                    action = { id = 'store:create', label = Kora.lang('create_store') },
                 },
-                { type = 'list', id = 'store-list', layout = 'cards', columns = 3, items = items, empty = 'No stores yet.' },
+                { type = 'list', id = 'store-list', layout = 'cards', columns = 3, items = items, empty = Kora.lang('no_stores_yet') },
             },
         },
     }
@@ -643,21 +651,21 @@ local function storeView()
     local store = find(data.stores, selectedStore)
     if not store then
         return {
-            id = 'store', label = 'Store', icon = 'ShoppingBag',
-            content = { title = 'Store', blocks = { { type = 'empty', title = 'Pick a store first.' } } },
+            id = 'store', label = Kora.lang('store'), icon = 'ShoppingBag',
+            content = { title = Kora.lang('store'), blocks = { { type = 'empty', title = Kora.lang('pick_a_store_first') } } },
         }
     end
 
     local registers = {}
     for index, register in ipairs(store.registers) do
-        local metadata = { { label = 'Sticky note', value = ('%d%%'):format(register.stickyChance or 0) } }
+        local metadata = { { label = Kora.lang('sticky_note'), value = ('%d%%'):format(register.stickyChance or 0) } }
         for _, entry in ipairs(searchSummary(registerSearch(register))) do metadata[#metadata + 1] = entry end
         registers[#registers + 1] = {
             id = tostring(index), label = register.label or ('Register %d'):format(index), icon = 'MapPin',
             description = coordsLabel(register.coords), metadata = metadata,
             actions = {
-                { id = 'register:edit:' .. index, label = 'Settings', icon = 'Pencil', variant = 'primary' },
-                { id = 'register:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' },
+                { id = 'register:edit:' .. index, label = Kora.lang('settings'), icon = 'Pencil', variant = 'primary' },
+                { id = 'register:remove:' .. index, label = Kora.lang('delete'), icon = 'Trash2', variant = 'destructive' },
             },
         }
     end
@@ -666,7 +674,7 @@ local function storeView()
     for index, safe in ipairs(store.safes) do
         safes[#safes + 1] = {
             id = tostring(index), label = ('Safe %d'):format(index), icon = 'MapPin', description = coordsLabel(safe.coords),
-            actions = { { id = 'safe:remove:' .. index, label = 'Delete', icon = 'Trash2', variant = 'destructive' } },
+            actions = { { id = 'safe:remove:' .. index, label = Kora.lang('delete'), icon = 'Trash2', variant = 'destructive' } },
         }
     end
 
@@ -674,25 +682,25 @@ local function storeView()
         id = 'store', label = store.label, icon = 'ShoppingBag',
         content = {
             title = store.label,
-            description = 'Place the registers and safes by aiming at them. A sticky note from any register gives the store\'s safe code.',
+            description = Kora.lang('store_objects_help'),
             blocks = {
                 {
-                    type = 'form', id = 'store-data', title = 'Settings',
+                    type = 'form', id = 'store-data', title = Kora.lang('settings'),
                     fields = {
-                        { id = 'label', label = 'Name', type = 'text', required = true, default = store.label },
-                        { id = 'minPolice', label = 'Minimum police', type = 'number', min = 0, max = 100, default = store.minPolice },
+                        { id = 'label', label = Kora.lang('name'), type = 'text', required = true, default = store.label },
+                        { id = 'minPolice', label = Kora.lang('minimum_police'), type = 'number', min = 0, max = 100, default = store.minPolice },
                     },
-                    action = { id = 'store:save', label = 'Save' },
+                    action = { id = 'store:save', label = Kora.lang('save') },
                 },
                 {
-                    type = 'form', id = 'register-place', title = 'Place registers',
+                    type = 'form', id = 'register-place', title = Kora.lang('place_registers'),
                     fields = registerFields(nil),
-                    action = { id = 'store:placeRegisters', label = 'Aim and place registers' },
+                    action = { id = 'store:placeRegisters', label = Kora.lang('aim_and_place_registers') },
                 },
-                { type = 'list', id = 'store-registers', layout = 'cards', columns = 3, title = ('Registers (%d)'):format(#registers), items = registers, empty = 'No registers yet.' },
-                { type = 'actions', actions = { { id = 'store:placeSafes', label = 'Aim and place safes', icon = 'Lock', variant = 'primary' } } },
-                { type = 'list', id = 'store-safes', layout = 'cards', columns = 3, title = ('Safes (%d)'):format(#safes), items = safes, empty = 'No safes yet.' },
-                { type = 'actions', title = 'Danger zone', actions = { { id = 'store:delete', label = 'Delete store', variant = 'destructive' } } },
+                { type = 'list', id = 'store-registers', layout = 'cards', columns = 3, title = ('Registers (%d)'):format(#registers), items = registers, empty = Kora.lang('no_registers_yet') },
+                { type = 'actions', actions = { { id = 'store:placeSafes', label = Kora.lang('aim_and_place_safes'), icon = 'Lock', variant = 'primary' } } },
+                { type = 'list', id = 'store-safes', layout = 'cards', columns = 3, title = ('Safes (%d)'):format(#safes), items = safes, empty = Kora.lang('no_safes_yet') },
+                { type = 'actions', title = Kora.lang('danger_zone'), actions = { { id = 'store:delete', label = Kora.lang('delete_store'), variant = 'destructive' } } },
             },
         },
     }
@@ -722,7 +730,7 @@ end
 
 local function askAmount(label, title, current)
     local result = Kora.nui.openInputDialog({
-        { id = 'amount', label = 'Amount', type = 'number', min = 1, max = Limits.itemAmount, default = current or 1, required = true },
+        { id = 'amount', label = Kora.lang('amount'), type = 'number', min = 1, max = Limits.itemAmount, default = current or 1, required = true },
     }, title, label)
     if not result or result.cancelled then return nil end
 
@@ -751,19 +759,23 @@ local function listAction(actionId, values)
         if not result then return fail(err) end
         selectedList, currentView = result.id, 'list'
         search = { query = nil, results = {}, total = 0 }
-        return refresh(notice('List created. Add some items.'))
+        return refresh(notice(Kora.lang('list_created_add_some_items')))
     end
 
     local selectId = actionId:match('^list:select:(.+)$')
     if selectId then
-        if not find(data.lists, selectId) then return fail('Unknown list.') end
+        if not find(data.lists, selectId) then
+            return fail(Kora.lang('unknown_list'))
+        end
         selectedList, currentView = selectId, 'list'
         search = { query = nil, results = {}, total = 0 }
         return refresh()
     end
 
     local list = find(data.lists, selectedList)
-    if not list then return fail('Pick a list first.') end
+    if not list then
+        return fail(Kora.lang('pick_a_list_first'))
+    end
 
     if actionId == 'list:search' then
         local query = text(values.query)
@@ -772,7 +784,9 @@ local function listAction(actionId, values)
             return refresh()
         end
         local result, err = call('lists:search', query, list.id)
-        if not result then return fail(err or 'The search failed.') end
+        if not result then
+            return fail(err or Kora.lang('item_search_failed'))
+        end
         search = { query = query, results = result.results or {}, total = result.total or #(result.results or {}) }
         return refresh()
     end
@@ -783,7 +797,9 @@ local function listAction(actionId, values)
         for _, result in ipairs(search.results) do
             if result.name == addName then found = result break end
         end
-        if not found then return fail('Search for that item again first.') end
+        if not found then
+            return fail(Kora.lang('item_search_again'))
+        end
 
         local amount = askAmount(found.label, 'Add to list')
         if not amount then return refresh() end
@@ -818,11 +834,11 @@ local function listAction(actionId, values)
     end
 
     if actionId == 'list:delete' then
-        if not confirmed('Delete list?', ('This removes %s. Props that used it will give nothing.'):format(list.label)) then return refresh() end
+        if not confirmed(Kora.lang('delete_list_question'), Kora.lang('delete_list_message', list.label)) then return refresh() end
         local result, err = call('lists:delete', list.id)
         if not result then return fail(err) end
         selectedList, currentView = nil, 'lists'
-        return refresh(notice('List deleted.'))
+        return refresh(notice(Kora.lang('list_deleted')))
     end
 
     return refresh()
@@ -838,15 +854,23 @@ end
 local function shellAction(actionId, values)
     local selectKey = actionId:match('^shell:select:(.+)$')
     if selectKey then
-        if not HouseShellByKey[selectKey] then return fail('Unknown shell.') end
+        if not HouseShellByKey[selectKey] then
+            return fail(Kora.lang('unknown_shell'))
+        end
         selectedShell, currentView = selectKey, 'shell'
         return refresh()
     end
 
-    if not (selectedShell and HouseShellByKey[selectedShell]) then return fail('Pick a shell first.') end
+    if not (selectedShell and HouseShellByKey[selectedShell]) then
+
+        return fail(Kora.lang('pick_a_shell_first'))
+
+    end
 
     if actionId == 'shell:enter' then
-        if editing then return fail('You are already inside a shell.') end
+        if editing then
+            return fail(Kora.lang('shell_already_inside'))
+        end
         pendingTool, currentView = { kind = 'enter', key = selectedShell }, 'shell'
         return { close = true }
     end
@@ -866,15 +890,17 @@ local function shellAction(actionId, values)
     if actionId == 'shell:breakItem' then
         local result, err = call('shells:breakItem', selectedShell, text(values.breakItem))
         if not result then return fail(err) end
-        return refresh(notice('Saved.'))
+        return refresh(notice(Kora.lang('saved')))
     end
 
     if actionId == 'shell:clear' then
-        if editing and editing.key == selectedShell then return fail('Leave the shell first.') end
-        if not confirmed('Clear setup?', 'This removes the exit and every prop. Houses using this shell will have nothing to rob.') then return refresh() end
+        if editing and editing.key == selectedShell then
+            return fail(Kora.lang('leave_the_shell_first'))
+        end
+        if not confirmed(Kora.lang('clear_setup'), Kora.lang('clear_shell_confirm')) then return refresh() end
         local result, err = call('shells:clear', selectedShell)
         if not result then return fail(err) end
-        return refresh(notice('Setup cleared.'))
+        return refresh(notice(Kora.lang('setup_cleared')))
     end
 
     if actionId == 'prop:place' then
@@ -884,7 +910,7 @@ local function shellAction(actionId, values)
         if model == '' then
             model = nil -- no prop: a box target
         elseif not IsModelInCdimage(joaat(model)) then
-            return fail('Unknown prop model.')
+            return fail(Kora.lang('unknown_prop_model'))
         end
         local listId = text(values.list)
         local search, searchErr = searchFromValues(values)
@@ -908,7 +934,7 @@ local function shellAction(actionId, values)
         local prop = props[index]
         if not prop then return refresh() end
 
-        local result = Kora.nui.openInputDialog(searchFields(propSearch(prop)), 'Search settings', prop.label or prop.model or 'Search spot')
+        local result = Kora.nui.openInputDialog(searchFields(propSearch(prop)), Kora.lang('search_settings'), prop.label or prop.model or Kora.lang('search_spot'))
         if not result or result.cancelled then return refresh() end
 
         local search, err = searchFromValues(result.values or {})
@@ -925,8 +951,8 @@ local function shellAction(actionId, values)
         if not prop then return refresh() end
 
         local result = Kora.nui.openInputDialog({
-            { id = 'list', label = 'Item list it gives', type = 'select', options = listOptions(), default = prop.list or 'none' },
-        }, 'Change list', prop.label or prop.model or 'Search spot')
+            { id = 'list', label = Kora.lang('item_list_it_gives'), type = 'select', options = listOptions(), default = prop.list or 'none' },
+        }, Kora.lang('change_list'), prop.label or prop.model or Kora.lang('search_spot'))
         if not result or result.cancelled then return refresh() end
 
         local chosen = result.values and result.values.list
@@ -940,20 +966,30 @@ end
 local function houseAction(actionId, values)
     if actionId == 'house:create' then
         local key = text(values.shell)
-        if not HouseShellByKey[key] then return fail('Pick a shell.') end
-        if editing then return fail('Leave the shell first: houses go in the real world.') end
+        if not HouseShellByKey[key] then
+            return fail(Kora.lang('pick_a_shell'))
+        end
+        if editing then
+            return fail(Kora.lang('leave_shell_for_house'))
+        end
         pendingTool, currentView, selectedHouse = { kind = 'houses', key = key }, 'houses', nil
         return { close = true }
     end
 
     local selectId = actionId:match('^house:select:(.+)$')
     if selectId then
-        if not find(data.houses, selectId) then return fail('Unknown house.') end
+        if not find(data.houses, selectId) then
+            return fail(Kora.lang('unknown_house'))
+        end
         selectedHouse, currentView = selectId, 'house'
         return refresh()
     end
 
-    if not (selectedHouse and find(data.houses, selectedHouse)) then return fail('Pick a house first.') end
+    if not (selectedHouse and find(data.houses, selectedHouse)) then
+
+        return fail(Kora.lang('pick_a_house_first'))
+
+    end
 
     if actionId == 'house:save' then
         local result, err = call('houses:details', selectedHouse, {
@@ -969,22 +1005,24 @@ local function houseAction(actionId, values)
             timeTo = tonumber(values.timeTo),
         })
         if not result then return fail(err) end
-        return refresh(notice('Saved.'))
+        return refresh(notice(Kora.lang('saved')))
     end
 
     if actionId == 'house:coords' then
-        if editing then return fail('Leave the shell first: the entrance goes in the real world.') end
+        if editing then
+            return fail(Kora.lang('leave_shell_for_entrance'))
+        end
         pendingTool, currentView = { kind = 'moveHouse', id = selectedHouse }, 'house'
         return { close = true }
     end
 
     if actionId == 'house:delete' then
         local house = find(data.houses, selectedHouse)
-        if not confirmed('Delete house?', ('This removes %s. The shell setup stays.'):format(house.label)) then return refresh() end
+        if not confirmed(Kora.lang('delete_house_question'), Kora.lang('delete_house_message', house.label)) then return refresh() end
         local result, err = call('houses:delete', selectedHouse)
         if not result then return fail(err) end
         selectedHouse, currentView = nil, 'houses'
-        return refresh(notice('House deleted.'))
+        return refresh(notice(Kora.lang('house_deleted')))
     end
 
     return refresh()
@@ -995,23 +1033,27 @@ local function storeAction(actionId, values)
         local result, err = call('stores:create', text(values.name))
         if not result then return fail(err) end
         selectedStore, currentView = result.id, 'store'
-        return refresh(notice('Store created. Place its registers and safes below.'))
+        return refresh(notice(Kora.lang('store_created_help')))
     end
 
     local selectId = actionId:match('^store:select:(.+)$')
     if selectId then
-        if not find(data.stores, selectId) then return fail('Unknown store.') end
+        if not find(data.stores, selectId) then
+            return fail(Kora.lang('unknown_store'))
+        end
         selectedStore, currentView = selectId, 'store'
         return refresh()
     end
 
     local store = find(data.stores, selectedStore)
-    if not store then return fail('Pick a store first.') end
+    if not store then
+        return fail(Kora.lang('pick_a_store_first'))
+    end
 
     if actionId == 'store:save' then
         local result, err = call('stores:details', store.id, { label = text(values.label), minPolice = tonumber(values.minPolice) })
         if not result then return fail(err) end
-        return refresh(notice('Saved.'))
+        return refresh(notice(Kora.lang('saved')))
     end
 
     if actionId == 'store:placeRegisters' then
@@ -1041,14 +1083,14 @@ local function storeAction(actionId, values)
     if index then
         local result, err = call('stores:registers', store.id, removeAt(store.registers, index))
         if not result then return fail(err) end
-        return refresh(notice('Register deleted.'))
+        return refresh(notice(Kora.lang('register_deleted')))
     end
 
     index = tonumber(actionId:match('^safe:remove:(%d+)$'))
     if index then
         local result, err = call('stores:safes', store.id, removeAt(store.safes, index))
         if not result then return fail(err) end
-        return refresh(notice('Safe deleted.'))
+        return refresh(notice(Kora.lang('safe_deleted')))
     end
 
     index = tonumber(actionId:match('^register:edit:(%d+)$'))
@@ -1057,7 +1099,7 @@ local function storeAction(actionId, values)
         local register = registers[index]
         if not register then return refresh() end
 
-        local result = Kora.nui.openInputDialog(registerFields(register), 'Register settings', register.label or ('Register %d'):format(index))
+        local result = Kora.nui.openInputDialog(registerFields(register), Kora.lang('register_settings'), register.label or Kora.lang('register_number', index))
         if not result or result.cancelled then return refresh() end
 
         local edited, err = registerFromValues(result.values or {})
@@ -1068,15 +1110,15 @@ local function storeAction(actionId, values)
         }
         local saved, saveErr = call('stores:registers', store.id, registers)
         if not saved then return fail(saveErr) end
-        return refresh(notice('Register saved.'))
+        return refresh(notice(Kora.lang('register_saved')))
     end
 
     if actionId == 'store:delete' then
-        if not confirmed('Delete store?', ('This removes %s, its registers and its safes.'):format(store.label)) then return refresh() end
+        if not confirmed(Kora.lang('delete_store_question'), Kora.lang('delete_store_message', store.label)) then return refresh() end
         local result, err = call('stores:delete', store.id)
         if not result then return fail(err) end
         selectedStore, currentView = nil, 'stores'
-        return refresh(notice('Store deleted.'))
+        return refresh(notice(Kora.lang('store_deleted')))
     end
 
     return refresh()
@@ -1094,19 +1136,19 @@ end
 
 Kora.nui.registerApp({
     id = APP_ID,
-    title = 'Robbery Creator',
+    title = Kora.lang('robbery_creator'),
     icon = 'Home',
     layout = 'standard',
     width = 1100,
     height = 760,
     defaultView = 'lists',
-    navigation = { { id = 'lists', label = 'Item lists', icon = 'Package', content = { title = 'Item lists', blocks = {} } } },
+    navigation = { { id = 'lists', label = Kora.lang('item_lists'), icon = 'Package', content = { title = Kora.lang('item_lists'), blocks = {} } } },
     onAction = onAction,
 })
 
 local function open()
     local result, err = call('get')
-    if not result then return toast(err or 'Admin permission required.') end
+    if not result then return toast(err or Kora.lang('admin_permission_required')) end
 
     while true do
         Kora.nui.updateApp(APP_ID, { navigation = buildNavigation() })

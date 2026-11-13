@@ -3,7 +3,7 @@ game 'gta5'
 lua54 'yes'
 
 name 'kora_robberies'
-author 'qbcore2'
+author 'Kora'
 version '0.2.1'
 description 'Robbery creator: house robberies (item lists, reusable shell setups, houses) and store robberies (registers, safes)'
 
@@ -15,7 +15,7 @@ dependency 'kora_interior'
 shared_scripts {
     '@kora_lib/init.lua',
     '@kora_core/init.lua',
-    'config.lua',
+    'shared/config.lua',
     'shared/constants.lua',
     'shared/shells.lua',
 }
@@ -26,6 +26,10 @@ client_scripts {
     'client/robbery.lua',
     'client/store.lua',
     'client/main.lua',
+}
+
+files {
+    'locales/*.lua',
 }
 
 -- Order matters here: each file uses the ones before it.

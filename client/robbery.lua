@@ -5,7 +5,7 @@ local inside = nil      -- while in a house: { id, house, spawned, objects, exit
 local houseStates = {}  -- house id -> { state = 'open' | 'cooldown', remaining = ms, at = GetGameTimer() }; none = available
 
 local function notify(message, kind)
-    Kora.notify.send({ title = 'Robbery', message = message, type = kind or 'error' })
+    Kora.notify.send({ title = Kora.lang('robbery'), message = message, type = kind or 'error' })
 end
 
 local function removeZone(id)
@@ -65,7 +65,7 @@ end
 local function searchOption(index, prop)
     return {
         icon = 'fa-solid fa-magnifying-glass',
-        label = prop.label or 'Search',
+        label = prop.label or Kora.lang('search'),
         onSelect = function() searchProp(index) end,
         canInteract = function() return inside ~= nil and not inside.searching and inside.states[index] == nil end,
     }
@@ -105,7 +105,7 @@ local function buildProps(info)
         Kora.print.debug(('[kora_robberies] %d props from the server, %d spawned, %d with a search target'):format(#info.props, spawned, targets))
     end
     if targets == 0 and #info.props > 0 then
-        notify('None of the spots here have an item list, so there is nothing to search. Give them one in the creator.')
+        notify(Kora.lang('no_search_list'))
     end
 end
 
@@ -114,13 +114,13 @@ local function enterHouse(id, door, info)
     local def = HouseShellByKey[house.shell]
     if not def then
         Kora.callback.trigger('kora_robberies:leave', id)
-        return notify('This house uses a shell that is not in the config.')
+        return notify(Kora.lang('house_shell_missing'))
     end
 
     local spawned, err = SpawnShell(def, HouseSpawnCoords(house))
     if not spawned then
         Kora.callback.trigger('kora_robberies:leave', id)
-        return notify(err or 'The inside could not be loaded.')
+        return notify(err or Kora.lang('inside_load_fail'))
     end
 
     inside = { id = id, house = house, spawned = spawned, objects = {}, zones = {}, states = info.states or {}, searching = false }
@@ -129,7 +129,7 @@ local function enterHouse(id, door, info)
     inside.exitZone = exports.kora_target:addBoxZone({
         coords = vector3(world.x, world.y, world.z),
         size = vector3(1.5, 1.5, 2.0),
-        options = { { label = 'Leave', icon = 'fa-solid fa-door-open', onSelect = leaveHouse } },
+        options = { { label = Kora.lang('leave'), icon = 'fa-solid fa-door-open', onSelect = leaveHouse } },
     })
 
     buildProps(info)
@@ -153,7 +153,7 @@ end
 
 local function enter(id, house)
     local info, err = Kora.callback.trigger('kora_robberies:breakin', id)
-    if not info then return notify(err or 'You could not get in.') end
+    if not info then return notify(err or Kora.lang('you_could_not_get_in')) end
     enterHouse(id, house, info)
 end
 
@@ -161,7 +161,7 @@ local function breakIn(id, house)
     if inside then return end
 
     local done = Kora.progressbar.start({
-        label = 'Breaking in...',
+        label = Kora.lang('breaking_in'),
         duration = defaults.breakTime,
         disable = { move = true, combat = true, car = true },
         anim = defaults.breakAnim,
@@ -176,12 +176,12 @@ local function doorOptions(id, house)
     end
 
     return {
-        { label = 'Break in', icon = 'fa-solid fa-user-secret', canInteract = when('available'),
+        { label = Kora.lang('break_in'), icon = 'fa-solid fa-user-secret', canInteract = when('available'),
             onSelect = function() breakIn(id, house) end },
-        { label = 'Enter', icon = 'fa-solid fa-door-open', canInteract = when('open'),
+        { label = Kora.lang('enter'), icon = 'fa-solid fa-door-open', canInteract = when('open'),
             onSelect = function() if not inside then enter(id, house) end end },
-        { label = 'Recently robbed', icon = 'fa-solid fa-clock', canInteract = when('cooldown'),
-            onSelect = function() notify(('Someone broke in here recently. Try again in %d minutes.'):format(minutesLeft(id))) end },
+        { label = Kora.lang('recently_robbed'), icon = 'fa-solid fa-clock', canInteract = when('cooldown'),
+            onSelect = function() notify(Kora.lang('recent_break_in', minutesLeft(id))) end },
     }
 end
 
@@ -232,7 +232,7 @@ end)
 
 RegisterNetEvent('kora_robberies:client:closed', function(houseId)
     if source ~= 65535 or not inside or inside.id ~= houseId then return end
-    notify('The robbery is over. You have been sent out.')
+    notify(Kora.lang('robbery_ended'))
     leaveHouse()
 end)
 

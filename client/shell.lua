@@ -10,7 +10,7 @@ end
 function SpawnShell(def, coords)
     local ok, result = pcall(def.spawn, coords)
     if not ok or type(result) ~= 'table' or not result.id then
-        return nil, 'The shell could not be spawned.'
+        return nil, Kora.lang('shell_could_not_be_spawned')
     end
 
     local ids = result.id
@@ -18,7 +18,7 @@ function SpawnShell(def, coords)
     while type(handle) == 'table' do handle = handle[1] end
     if type(handle) ~= 'number' then
         Kora.print.warn(('[kora_robberies] %s returned no shell handle: %s'):format(tostring(def.label), json.encode(ids)))
-        return nil, 'The shell did not spawn.'
+        return nil, Kora.lang('shell_did_not_spawn')
     end
 
     local shell, waited = nil, 0
