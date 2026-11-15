@@ -128,7 +128,7 @@ Kora.callback.register('kora_robberies:register:finish', function(src, storeId, 
     local register = spotState(storeId, 'registers', index)
     if not (register.busyBy == src and not register.robbed) then return false, Kora.lang('you_are_not_robbing_that') end
     if GetGameTimer() - register.started < register.duration - 1000 then
-        Kora.print.warn(('[kora_robberies] player %s finished a register too fast'):format(src))
+        Kora.logging.warn('store.register_too_fast', 'A player finished a register too fast', { playerId = src })
         releaseRegister(storeId, index)
         return false, Kora.lang('too_fast')
     end

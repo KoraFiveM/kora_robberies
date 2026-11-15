@@ -157,7 +157,7 @@ function playerJob(src)
     if type(job) ~= 'table' then
         if not warned then
             warned = true
-            Kora.print.warn('[kora_robberies] could not read a player\'s job, so no police are counted. Fix playerJob() in server/_functions.lua.')
+            Kora.logging.warn('police.job_unreadable', 'Could not read a player job, so no police are counted. Fix playerJob() in server/_functions.lua.')
         end
         return nil, false
     end

@@ -28,7 +28,7 @@ local function busyWith(fn)
     working = true
     local ok, err = pcall(fn)
     working = false
-    if not ok then Kora.print.warn(('[kora_robberies] %s'):format(tostring(err))) end
+    if not ok then Kora.logging.warn('store.action_failed', 'A store action raised an error', { error = tostring(err) }) end
 end
 
 local function robRegister(storeId, index)
