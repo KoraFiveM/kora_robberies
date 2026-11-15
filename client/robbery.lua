@@ -88,7 +88,7 @@ local function buildProps(info)
         else
             local object = SpawnProp(prop.model, world, heading)
             if not object then
-                Kora.print.warn(('[kora_robberies] prop %d (%s) could not be spawned'):format(index, prop.model))
+                Kora.logging.warn('house.prop_spawn_failed', 'A prop could not be spawned', { index = index, model = tostring(prop.model) })
             else
                 spawned = spawned + 1
                 inside.objects[#inside.objects + 1] = object
@@ -102,7 +102,7 @@ local function buildProps(info)
     end
 
     if defaults.debug then
-        Kora.print.debug(('[kora_robberies] %d props from the server, %d spawned, %d with a search target'):format(#info.props, spawned, targets))
+        Kora.logging.debug('house.props_spawned', 'Props received from the server and spawned', { received = #info.props, spawned = spawned, searchTargets = targets })
     end
     if targets == 0 and #info.props > 0 then
         notify(Kora.lang('no_search_list'))
@@ -202,7 +202,7 @@ local function loadDoors()
     end
     list = list or {}
 
-    if defaults.debug then Kora.print.debug(('[kora_robberies] %d house doors'):format(#list)) end
+    if defaults.debug then Kora.logging.debug('house.doors_received', 'House doors received', { count = #list }) end
     for _, house in ipairs(list) do
         local c = house.coords
         if house.state then houseStates[house.id] = { state = house.state, remaining = house.remaining or 0, at = GetGameTimer() } end

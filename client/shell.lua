@@ -17,7 +17,7 @@ function SpawnShell(def, coords)
     local handle = ids
     while type(handle) == 'table' do handle = handle[1] end
     if type(handle) ~= 'number' then
-        Kora.print.warn(('[kora_robberies] %s returned no shell handle: %s'):format(tostring(def.label), json.encode(ids)))
+        Kora.logging.warn('shell.no_handle', 'Shell spawn returned no shell handle', { shell = tostring(def.label) })
         return nil, Kora.lang('shell_did_not_spawn')
     end
 
@@ -35,11 +35,14 @@ function SpawnShell(def, coords)
             waited = waited + 100
         end
         if #(GetEntityCoords(shell) - coords) > 100.0 then
-            Kora.print.warn(('[kora_robberies] the shell is %.0f units from where it was spawned; props will be placed wrong. Check client/shell.lua.'):format(#(GetEntityCoords(shell) - coords)))
+            Kora.logging.warn('shell.spawn_offset', 'The shell is far from where it was spawned; props will be placed wrong. Check client/shell.lua.', {
+                distance = #(GetEntityCoords(shell) - coords),
+            })
         end
     else
-        Kora.print.warn(('[kora_robberies] %s: handle %s is not an entity on this client, so the spawn coordinates are used as the shell origin.'):format(
-            tostring(def.label), tostring(handle)))
+        Kora.logging.warn('shell.handle_not_entity', 'Shell handle is not an entity on this client, so the spawn coordinates are used as the shell origin', {
+            shell = tostring(def.label), handle = tostring(handle),
+        })
     end
 
     local poi = type(ids) == 'table' and type(ids[2]) == 'table' and ids[2] or nil

@@ -84,7 +84,7 @@ end
 CreateThread(function()
     Wait(1000)
     if not Kora.sql.ready(60000) then
-        Kora.print.warn('[kora_robberies] kora_sql was unavailable; robbery data is not loaded until restart.')
+        Kora.logging.warn('data.sql_unavailable', 'kora_sql was unavailable; robbery data is not loaded until restart')
         return
     end
     for _, spec in ipairs(KoraRobberiesSchema) do
@@ -92,12 +92,12 @@ CreateThread(function()
     end
     local reports, schemaErr = Kora.sql.ensureTables(KoraRobberiesSchema)
     if schemaErr then
-        Kora.print.warn(('[kora_robberies] schema failed: %s'):format(tostring(schemaErr)))
+        Kora.logging.error('schema.setup_failed', 'Robbery schema setup failed', { error = tostring(schemaErr) })
         return
     end
     for _, report in ipairs(reports or {}) do
         for _, warning in ipairs(report.warnings or {}) do
-            Kora.print.warn(('[kora_robberies] %s: %s'):format(tostring(report.table), tostring(warning)))
+            Kora.logging.warn('schema.table_warning', 'Schema reported a warning for a table', { table = tostring(report.table), warning = tostring(warning) })
         end
     end
 
@@ -119,7 +119,7 @@ CreateThread(function()
         end
     end)
     if not ok then
-        Kora.print.warn(('[kora_robberies] could not read the database: %s'):format(tostring(err)))
+        Kora.logging.error('data.load_failed', 'Could not read robbery data from the database', { error = tostring(err) })
         return
     end
 
@@ -129,7 +129,9 @@ CreateThread(function()
     for id, house in pairs(Houses) do
         local setup = Setups[house.shell]
         if not (setup and setup.exit) then
-            Kora.print.warn(('[kora_robberies] house "%s" uses the shell "%s", which has no exit set yet. Players cannot get in until you set it in /%s.'):format(id, house.shell, Config.Creator.command))
+            Kora.logging.warn('data.house_shell_no_exit', 'A house uses a shell with no exit set, so players cannot get in until it is set in the creator', {
+                houseId = id, shell = house.shell, command = Config.Creator.command,
+            })
         end
     end
 end)

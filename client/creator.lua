@@ -177,7 +177,7 @@ local function enterShell(key)
 
     local spawned, err = SpawnShell(HouseShellByKey[key], vector3(origin.x, origin.y, origin.z + lower))
     if not spawned then
-        Kora.print.warn(('[kora_robberies] could not enter the %s shell: %s'):format(key, tostring(err)))
+        Kora.logging.warn('creator.shell_enter_failed', 'Could not enter the shell', { shell = key, error = tostring(err) })
         return toast(err)
     end
 

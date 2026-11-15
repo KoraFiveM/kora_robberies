@@ -234,7 +234,7 @@ Kora.callback.register('kora_robberies:prop:finish', function(src, houseId, inde
     local state = session.props[index]
     if not (state and state.busyBy == src and not state.looted) then return false, Kora.lang('you_are_not_searching_that') end
     if GetGameTimer() - state.started < state.duration - 1000 then
-        Kora.print.warn(('[kora_robberies] player %s finished a search too fast'):format(src))
+        Kora.logging.warn('house.search_too_fast', 'A player finished a search too fast', { playerId = src })
         releaseProp(houseId, index)
         return false, Kora.lang('too_fast')
     end
