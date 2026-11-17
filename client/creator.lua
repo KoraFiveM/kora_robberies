@@ -50,7 +50,7 @@ end
 
 local function listLabel(id)
     local list = id and find(data.lists, id)
-    return list and list.label or 'No list'
+    return list and list.label or Kora.lang('no_list')
 end
 
 local function propSearch(prop)
@@ -121,9 +121,9 @@ local function searchSummary(search)
     end
     return {
         { label = Kora.lang('progress_text'), value = search.progressLabel },
-        { label = Kora.lang('search_time'), value = ('%.1f s'):format(search.time / 1000) },
-        { label = Kora.lang('animation'), value = search.anim and ('%s / %s'):format(search.anim.dict, search.anim.clip) or 'None' },
-        { label = Kora.lang('blocks'), value = #blocked > 0 and table.concat(blocked, ', ') or 'Nothing' },
+        { label = Kora.lang('search_time'), value = Kora.lang('seconds_value', search.time / 1000) },
+        { label = Kora.lang('animation'), value = search.anim and ('%s / %s'):format(search.anim.dict, search.anim.clip) or Kora.lang('none') },
+        { label = Kora.lang('blocks'), value = #blocked > 0 and table.concat(blocked, ', ') or Kora.lang('nothing') },
     }
 end
 
@@ -192,7 +192,7 @@ local function enterShell(key)
 end
 
 local function notInsideReason(key)
-    if not editing then return 'You are not inside a shell yet. Press Enter the shell to edit.' end
+    if not editing then return Kora.lang('not_inside_shell', Kora.lang('enter_the_shell_to_edit')) end
     if editing.key ~= key then
         return Kora.lang('inside_shell_leave_first', HouseShellByKey[editing.key].label)
     end
@@ -282,7 +282,7 @@ local function placeStoreSpots(tool)
 
         local result, err = call('stores:' .. tool.field, tool.id, list)
         if not result then return toast(err) end
-        toast(tool.field == 'registers' and 'Register placed.' or 'Safe placed.', 'success')
+        toast(tool.field == 'registers' and Kora.lang('register_placed') or Kora.lang('safe_placed'), 'success')
     end
 end
 
@@ -304,7 +304,7 @@ local function listsView()
     for _, list in ipairs(data.lists) do
         items[#items + 1] = {
             id = list.id, label = list.label, icon = 'Package',
-            description = ('%d items'):format(#list.items),
+            description = Kora.lang('item_count', #list.items),
             action = 'list:select:' .. list.id,
         }
     end
@@ -331,7 +331,7 @@ local function foundCards(results)
     for _, result in ipairs(results) do
         cards[#cards + 1] = {
             id = result.name, label = result.label, description = result.name, image = result.image,
-            metadata = result.added and { { label = Kora.lang('status'), value = 'Already in the list' } } or nil,
+            metadata = result.added and { { label = Kora.lang('status'), value = Kora.lang('already_in_the_list') } } or nil,
             actions = result.added and {} or { { id = 'list:add:' .. result.name, label = Kora.lang('add'), icon = 'Plus', variant = 'primary' } },
         }
     end
@@ -361,19 +361,19 @@ local function listView()
 
     local found = foundCards(search.results)
     local blocks = {
-        { type = 'list', id = 'list-items', layout = 'cards', columns = 3, title = ('Items (%d)'):format(#items), items = items, empty = Kora.lang('list_empty_help') },
+        { type = 'list', id = 'list-items', layout = 'cards', columns = 3, title = Kora.lang('items_title', #items), items = items, empty = Kora.lang('list_empty_help') },
         {
             type = 'form', id = 'list-search', title = Kora.lang('add_items'),
             fields = { { id = 'query', label = Kora.lang('search_all_items'), type = 'text', default = search.query or '',
                 description = Kora.lang('search_hint') } },
-            action = { id = 'list:search', label = Kora.lang('search') },
+            action = { id = 'list:search', label = Kora.lang('search_button') },
         },
     }
     if search.query then
-        local more = search.total > #found and (' of ' .. search.total) or ''
+        local more = search.total > #found and Kora.lang('results_of', search.total) or ''
         blocks[#blocks + 1] = {
             type = 'list', id = 'list-results', layout = 'cards', columns = 3,
-            title = ('Results for "%s" (%d%s)'):format(search.query, #found, more),
+            title = Kora.lang('results_for', search.query, #found, more),
             items = found, empty = Kora.lang('no_items_match_that_search'),
         }
     end
@@ -394,7 +394,7 @@ local function shellsView()
         local setup = data.setups[shell.key]
         items[#items + 1] = {
             id = shell.key, label = shell.label, icon = 'Door',
-            description = setup and ('%d props · exit %s'):format(#setup.props, setup.exit and 'set' or 'not set') or 'Not set up yet',
+            description = setup and Kora.lang(setup.exit and 'shell_props_exit_set' or 'shell_props_exit_not_set', #setup.props) or Kora.lang('not_set_up_yet'),
             action = 'shell:select:' .. shell.key,
         }
     end
@@ -418,7 +418,7 @@ local function propCards(props)
             id = tostring(index),
             label = prop.label or prop.model or Kora.lang('search_spot'),
             icon = prop.model and 'MapPin' or 'Square',
-            description = ('%s · %s'):format(prop.model or 'Box target', coordsLabel(prop.offset)),
+            description = ('%s · %s'):format(prop.model or Kora.lang('box_target'), coordsLabel(prop.offset)),
             metadata = metadata,
             actions = {
                 { id = 'prop:list:' .. index, label = Kora.lang('change_list'), icon = 'Pencil', variant = 'primary' },
@@ -453,7 +453,7 @@ local function shellView()
         blocks[#blocks + 1] = {
             type = 'actions',
             actions = {
-                { id = 'shell:exit', label = setup.exit and 'Aim and move the exit' or 'Aim and set the exit', icon = 'Door', variant = 'primary' },
+                { id = 'shell:exit', label = setup.exit and Kora.lang('aim_and_move_the_exit') or Kora.lang('aim_and_set_the_exit'), icon = 'Door', variant = 'primary' },
                 { id = 'shell:leave', label = Kora.lang('leave_the_shell'), icon = 'X' },
             },
         }
@@ -486,7 +486,7 @@ local function shellView()
     }
 
     local props = propCards(setup.props)
-    blocks[#blocks + 1] = { type = 'list', id = 'shell-props', layout = 'cards', columns = 3, title = ('Props (%d)'):format(#props), items = props, empty = Kora.lang('props_empty_help') }
+    blocks[#blocks + 1] = { type = 'list', id = 'shell-props', layout = 'cards', columns = 3, title = Kora.lang('props_title', #props), items = props, empty = Kora.lang('props_empty_help') }
     if data.setups[def.key] then
         blocks[#blocks + 1] = {
             type = 'actions', title = Kora.lang('danger_zone'),
@@ -498,7 +498,7 @@ local function shellView()
         id = 'shell', label = def.label, icon = 'Door',
         content = {
             title = def.label,
-            description = ('Exit %s. Enter the shell, aim where the exit should be, then place your props.'):format(setup.exit and 'is set' or 'is not set yet'),
+            description = Kora.lang(setup.exit and 'shell_exit_set_help' or 'shell_exit_not_set_help'),
             blocks = blocks,
         },
     }
@@ -507,7 +507,7 @@ end
 local function housesView()
     local shellOptions = {}
     for _, shell in ipairs(HouseShells) do
-        shellOptions[#shellOptions + 1] = { value = shell.key, label = data.setups[shell.key] and shell.label or (shell.label .. ' (not set up)') }
+        shellOptions[#shellOptions + 1] = { value = shell.key, label = data.setups[shell.key] and shell.label or Kora.lang('shell_not_set_up', shell.label) }
     end
 
     local items = {}
@@ -554,7 +554,7 @@ local function houseView()
         id = 'house', label = house.label, icon = 'Home',
         content = {
             title = house.label,
-            description = ('Shell: %s%s. Entrance: %s.'):format(def and def.label or house.shell, data.setups[house.shell] and '' or ' (not set up yet)', coordsLabel(house.coords)),
+            description = Kora.lang('house_shell_entrance', def and def.label or house.shell, data.setups[house.shell] and '' or Kora.lang('shell_not_set_up_yet'), coordsLabel(house.coords)),
             blocks = {
                 {
                     type = 'form', id = 'house-data', title = Kora.lang('settings'),
@@ -565,9 +565,9 @@ local function houseView()
                         { id = 'security', label = Kora.lang('security_system'), type = 'select', default = house.security and 'enabled' or 'disabled',
                             options = { { value = 'enabled', label = Kora.lang('enabled') }, { value = 'disabled', label = Kora.lang('disabled') } } },
                         { id = 'breakItem', label = Kora.lang('break_in_item'), type = 'text', default = house.breakItem or '',
-                            description = ('Empty uses the shell\'s item (%s).'):format((data.setups[house.shell] and data.setups[house.shell].breakItem) or Config.Robberies.House.defaults.breakItem) },
+                            description = Kora.lang('break_item_empty_help', (data.setups[house.shell] and data.setups[house.shell].breakItem) or Config.Robberies.House.defaults.breakItem) },
                         { id = 'securityItem', label = Kora.lang('security_item'), type = 'text', default = house.securityItem or '',
-                            description = ('Also needed when the security system is on, and it alerts the police. Empty uses %s.'):format(Config.Robberies.House.defaults.securityItem) },
+                            description = Kora.lang('security_item_help', Config.Robberies.House.defaults.securityItem) },
                         { id = 'lowerZ', label = Kora.lang('shell_depth'), type = 'number', min = -300, max = 0, default = house.lowerZ or Config.Robberies.House.defaults.lowerZ,
                             description = Kora.lang('shell_depth_help') },
                         { id = 'timeLimit', label = Kora.lang('robbery_times'), type = 'select', default = house.hours and 'limited' or 'any',
@@ -587,7 +587,7 @@ end
 local function registerSearch(register)
     local search = propSearch(register)
     if not (register and register.label) then search.label = Kora.lang('rob_register') end
-    if not (register and register.progressLabel) then search.progressLabel = 'Robbing Register...' end
+    if not (register and register.progressLabel) then search.progressLabel = Kora.lang('robbing_register') end
     return search
 end
 
@@ -615,7 +615,7 @@ local function registerFromValues(values)
     if not chance or chance < 0 or chance > 100 then
         return nil, Kora.lang('sticky_chance_range')
     end
-    if text(values.progressLabel) == '' then search.progressLabel = 'Robbing Register...' end
+    if text(values.progressLabel) == '' then search.progressLabel = Kora.lang('robbing_register') end
     search.stickyChance = math.floor(chance)
     return search
 end
@@ -625,7 +625,7 @@ local function storesView()
     for _, store in ipairs(data.stores) do
         items[#items + 1] = {
             id = store.id, label = store.label, icon = 'ShoppingBag',
-            description = ('%d registers · %d safes · %d police'):format(#store.registers, #store.safes, store.minPolice),
+            description = Kora.lang('store_summary', #store.registers, #store.safes, store.minPolice),
             action = 'store:select:' .. store.id,
         }
     end
@@ -661,7 +661,7 @@ local function storeView()
         local metadata = { { label = Kora.lang('sticky_note'), value = ('%d%%'):format(register.stickyChance or 0) } }
         for _, entry in ipairs(searchSummary(registerSearch(register))) do metadata[#metadata + 1] = entry end
         registers[#registers + 1] = {
-            id = tostring(index), label = register.label or ('Register %d'):format(index), icon = 'MapPin',
+            id = tostring(index), label = register.label or Kora.lang('register_number', index), icon = 'MapPin',
             description = coordsLabel(register.coords), metadata = metadata,
             actions = {
                 { id = 'register:edit:' .. index, label = Kora.lang('settings'), icon = 'Pencil', variant = 'primary' },
@@ -673,7 +673,7 @@ local function storeView()
     local safes = {}
     for index, safe in ipairs(store.safes) do
         safes[#safes + 1] = {
-            id = tostring(index), label = ('Safe %d'):format(index), icon = 'MapPin', description = coordsLabel(safe.coords),
+            id = tostring(index), label = Kora.lang('safe_number', index), icon = 'MapPin', description = coordsLabel(safe.coords),
             actions = { { id = 'safe:remove:' .. index, label = Kora.lang('delete'), icon = 'Trash2', variant = 'destructive' } },
         }
     end
@@ -697,9 +697,9 @@ local function storeView()
                     fields = registerFields(nil),
                     action = { id = 'store:placeRegisters', label = Kora.lang('aim_and_place_registers') },
                 },
-                { type = 'list', id = 'store-registers', layout = 'cards', columns = 3, title = ('Registers (%d)'):format(#registers), items = registers, empty = Kora.lang('no_registers_yet') },
+                { type = 'list', id = 'store-registers', layout = 'cards', columns = 3, title = Kora.lang('registers_title', #registers), items = registers, empty = Kora.lang('no_registers_yet') },
                 { type = 'actions', actions = { { id = 'store:placeSafes', label = Kora.lang('aim_and_place_safes'), icon = 'Lock', variant = 'primary' } } },
-                { type = 'list', id = 'store-safes', layout = 'cards', columns = 3, title = ('Safes (%d)'):format(#safes), items = safes, empty = Kora.lang('no_safes_yet') },
+                { type = 'list', id = 'store-safes', layout = 'cards', columns = 3, title = Kora.lang('safes_title', #safes), items = safes, empty = Kora.lang('no_safes_yet') },
                 { type = 'actions', title = Kora.lang('danger_zone'), actions = { { id = 'store:delete', label = Kora.lang('delete_store'), variant = 'destructive' } } },
             },
         },
@@ -801,13 +801,13 @@ local function listAction(actionId, values)
             return fail(Kora.lang('item_search_again'))
         end
 
-        local amount = askAmount(found.label, 'Add to list')
+        local amount = askAmount(found.label, Kora.lang('add_to_list'))
         if not amount then return refresh() end
 
         data.items[addName] = { label = found.label, image = found.image }
         local items = copyItems(list)
         items[#items + 1] = { item = addName, amount = amount }
-        return saveItems(list, items, ('%dx %s added.'):format(amount, found.label))
+        return saveItems(list, items, Kora.lang('item_added', amount, found.label))
     end
 
     local editName = actionId:match('^list:edit:(.+)$')
@@ -815,10 +815,10 @@ local function listAction(actionId, values)
         local items = copyItems(list)
         for _, entry in ipairs(items) do
             if entry.item == editName then
-                local amount = askAmount(itemLabel(editName), 'Edit item', entry.amount)
+                local amount = askAmount(itemLabel(editName), Kora.lang('edit_item'), entry.amount)
                 if not amount then return refresh() end
                 entry.amount = amount
-                return saveItems(list, items, ('%s is now %dx.'):format(itemLabel(editName), amount))
+                return saveItems(list, items, Kora.lang('item_amount_now', itemLabel(editName), amount))
             end
         end
         return refresh()
@@ -830,7 +830,7 @@ local function listAction(actionId, values)
         for _, entry in ipairs(copyItems(list)) do
             if entry.item ~= removeName then items[#items + 1] = entry end
         end
-        return saveItems(list, items, ('%s removed.'):format(itemLabel(removeName)))
+        return saveItems(list, items, Kora.lang('item_removed', itemLabel(removeName)))
     end
 
     if actionId == 'list:delete' then
@@ -925,7 +925,7 @@ local function shellAction(actionId, values)
 
     local index = tonumber(actionId:match('^prop:remove:(%d+)$'))
     if index then
-        return setProps(removeAt(setupFor(selectedShell).props, index), 'Prop deleted.')
+        return setProps(removeAt(setupFor(selectedShell).props, index), Kora.lang('prop_deleted'))
     end
 
     index = tonumber(actionId:match('^prop:search:(%d+)$'))
@@ -941,7 +941,7 @@ local function shellAction(actionId, values)
         if not search then return fail(err) end
         prop.label, prop.progressLabel = search.label, search.progressLabel
         prop.time, prop.anim, prop.disable = search.time, search.anim, search.disable
-        return setProps(props, 'Search settings saved.')
+        return setProps(props, Kora.lang('search_settings_saved'))
     end
 
     index = tonumber(actionId:match('^prop:list:(%d+)$'))
@@ -957,7 +957,7 @@ local function shellAction(actionId, values)
 
         local chosen = result.values and result.values.list
         prop.list = chosen ~= 'none' and chosen or nil
-        return setProps(props, 'List changed.')
+        return setProps(props, Kora.lang('list_changed'))
     end
 
     return refresh()
