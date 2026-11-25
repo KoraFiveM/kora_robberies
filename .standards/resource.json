@@ -11,6 +11,7 @@
     ],
     "server": [
       "fft_hooks_server.lua",
+      "kora_versioncheck.lua",
       "server/_functions.lua",
       "server/creator.lua",
       "server/data.lua",
